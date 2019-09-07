@@ -153,19 +153,19 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 			if (x+2<N && board[y][x+2]==0)
 			{
 				move_pos.emplace_back(abs(board[y][x-1])-2, change_to_int(x+2,y));
-				if (x+3<N && board[y][x+3]*player_number<=0)	// opponent's soldier/townhall or empty cell
+				if (x+3<N && board[y][x+3]*player_number <= 0)	// opponent's soldier/townhall or empty cell
 					fire_at[change_to_int(x+3,y)] = i; 
 
-				if (x+4<N && board[y][x+4]*player_number<=0)	// opponent's soldier
+				if (x+4<N && board[y][x+4]*player_number <= 0)	// opponent's soldier
 					fire_at[change_to_int(x+4,y)] = i;
 			}
 			if (x-2>=0 && board[y][x-2]==0)
 			{
 				move_pos.emplace_back(abs(board[y][x+1])-2, change_to_int(x-2,y));
-				if (x-3>=0 && board[y][x-3]*player_number<=0)
+				if (x-3>=0 && board[y][x-3]*player_number <= 0)
 					fire_at[change_to_int(x-3,y)] = i;
 
-				else if (x-4>=0 && board[y][x-4]*player_number<=0)
+				if (x-4>=0 && board[y][x-4]*player_number <= 0)
 					fire_at[change_to_int(x-4,y)] = i;
 			}
 		}
@@ -182,15 +182,15 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 						fire_at[change_to_int(x,y+3)] = i;
 						
 					if (y+4<M && board[y+4][x]*player_number <= 0)
-						fire_at[change_to_int(x,y+4)];
+						fire_at[change_to_int(x,y+4)] = i;
 				}
 				if (y-2>=0 && board[y-2][x]==0)
 				{
 					move_pos.emplace_back(abs(board[y+1][x])-2, change_to_int(x,y-2));
-					if (y-3>=0 && board[y-3][x]*player_number < 0)
+					if (y-3>=0 && board[y-3][x]*player_number <= 0)
 						fire_at[change_to_int(x,y-3)] = i;
 		
-					if (y-4<M && board[y-4][x]*player_number < 0)
+					if (y-4>=0 && board[y-4][x]*player_number <= 0)
 						fire_at[change_to_int(x,y-4)] = i;
 				}
 			}
@@ -227,12 +227,12 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 					if (y-4>=0 && x-4>=0 && board[y-4][x-4]*player_number <= 0)
 						fire_at[change_to_int(x-4,y-4)] = i;
 				}
-				if (y+2<M && x+2<M && board[y+2][x+2]==0)
+				if (y+2<M && x+2<N && board[y+2][x+2]==0)
 				{
 					move_pos.emplace_back(abs(board[y-1][x-1])-2, change_to_int(x+2,y+2));
-					if (y+3>=0 && x+3>=0 && board[y+3][x+3]*player_number <= 0)
+					if (y+3<M && x+3<N && board[y+3][x+3]*player_number <= 0)
 						fire_at[change_to_int(x+3,y+3)] = i;
-					if (y+4>=0 && x+4>=0 && board[y+4][x+4]*player_number <= 0)
+					if (y+4<M && x+4<N && board[y+4][x+4]*player_number <= 0)
 						fire_at[change_to_int(x+4,y+4)] = i;		
 				}
 			}
@@ -612,28 +612,182 @@ int main(int argc, char const *argv[])
 		play_move(x1,y1,ch2,x2,y2,player_id);
 		print_board();
 	}
-	// play();
-	// vector<int> cells;
-	// possible_moves2(2,-1,cells);
-	// cout<<"--------------"<<endl;
-	// for (int i=0; i<cells.size(); i++)
-	// 	cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+	
+	cout<<"MOVE 1 by player 0"<<endl;
+	play_move(2, 5, 'M', 2, 4, 1);
+	print_board();
 
-	// cells.clear();
-	// possible_moves2(5,-1,cells);
-	// cout<<"--------------"<<endl;
-	// for (int i=0; i<cells.size(); i++)
-	// 	cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+	cout<<"MOVE 1 by player 1"<<endl;
+	play_move(3, 2, 'M', 4, 3, -1);
+	print_board();
 
-	// vector<pair<int,int>> move_pos;
-	// vector<int> fire_at_f;
-	// cannon_related(-1, move_pos, fire_at_f);
-	// cout<<"cannon movement"<<endl;
-	// for (int i=0; i<move_pos.size(); i++)
-	// 	cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-	// cout<<"cannon firing"<<endl;
-	// for (int i=0; i<fire_at_f.size(); i++)
-	// 	cout<<"hit at "<<fire_at_f[i]<<endl;
+	cout<<"MOVE 2 by player 0"<<endl;
+	play_move(0, 6, 'M', 1, 5, 1);
+	print_board();
+
+	cout<<"MOVE 2 by player 1"<<endl;
+	play_move(1, 2, 'M', 2, 3, -1);
+	print_board();
+
+	vector<int> cells;
+	possible_moves2(5,-1,cells);
+	cout<<"--------------"<<endl;
+	for (int i=0; i<cells.size(); i++)
+		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+
+	vector<pair<int,int>> move_pos;
+	vector<pair<int,int>> fire_at_f;
+	cannon_related(-1, move_pos, fire_at_f);
+	cout<<"cannon movement"<<endl;
+	for (int i=0; i<move_pos.size(); i++)
+		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+	// -------
+	cout<<"MOVE 3 by player 0"<<endl;
+	play_move(2, 4, 'M', 2, 3, 1);
+	// for (int i=0; i<soldiers_number; i++)
+	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
+	print_board();
+
+	cout<<"MOVE 3 by player 1"<<endl;
+	play_move(3, 1, 'M', 4, 2, -1);
+	print_board();
+
+	cannon_related(-1,move_pos,fire_at_f);
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	// try change yahan pe --------------
+
+	cout<<"MOVE 4 by player 0"<<endl;
+	play_move(4, 5, 'B', 4, 3, 1);
+	// for (int i=0; i<soldiers_number; i++)
+	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
+	print_board();
+
+	cout<<"MOVE 4 by player 1"<<endl;
+	play_move(7, 1, 'M', 6, 2, -1);
+	print_board();
+
+	cout<<"MOVE 5 by player 0"<<endl;
+	play_move(2, 3, 'M', 2, 2, 1);
+	// for (int i=0; i<soldiers_number; i++)
+	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
+	print_board();
+
+	cannon_related(1,move_pos,fire_at_f);
+	cout<<"cannon movement"<<endl;
+	for (int i=0; i<move_pos.size(); i++)
+		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	// 
+
+	cout<<"MOVE 5 by player 1"<<endl;
+	play_move(3, 0, 'M', 3, 1, -1);
+	print_board();
+
+	cout<<"MOVE 6 by player 0"<<endl;
+	play_move(1, 5, 'M', 1, 4, 1);
+	print_board();
+
+	cannon_related(1,move_pos,fire_at_f);
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	cout<<"cannon movement"<<endl;
+	for (int i=0; i<move_pos.size(); i++)
+		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
+
+	cannon_related(-1,move_pos,fire_at_f);
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	possible_moves2(5,-1,cells);
+	cout<<"--------------"<<endl;
+	for (int i=0; i<cells.size(); i++)
+		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+
+	//
+
+	cout<<"MOVE 6 by player 1"<<endl;
+	play_move(4, 2, 'B', 2, 2, -1);
+	print_board();
+
+	cout<<"MOVE 7 by player 0"<<endl;
+	play_move(4, 5, 'B', 4, 2, 1);
+	print_board();
+
+	cout<<"MOVE 7 by player 1"<<endl;
+	play_move(5, 0, 'M', 5, 3, -1);
+	print_board();
+
+	cout<<"MOVE 8 by player 0"<<endl;
+	play_move(4, 7, 'M', 4, 4, 1);
+	print_board();
+
+	cout<<"MOVE 8 by player 1"<<endl;
+	play_move(5, 1, 'M', 5, 4, -1);
+	print_board();
+
+	possible_moves2(6,-1,cells);
+	cout<<"--------------"<<endl;
+	for (int i=0; i<cells.size(); i++)
+		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+
+	possible_moves2(7,1,cells);
+	cout<<"--------------"<<endl;
+	for (int i=0; i<cells.size(); i++)
+		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
+
+	cannon_related(1,move_pos,fire_at_f);
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	cout<<"cannon movement"<<endl;
+	for (int i=0; i<move_pos.size(); i++)
+		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
+
+	cout<<"MOVE 9 by player 0"<<endl;
+	play_move(4, 4, 'M', 4, 3, 1);
+	print_board();
+
+	cout<<"MOVE 9 by player 1"<<endl;
+	play_move(7, 0, 'M', 7, 1, -1);
+	print_board();
+
+	cannon_related(1,move_pos,fire_at_f);
+	cout<<"cannon firing"<<endl;
+	for (int i=0; i<fire_at_f.size(); i++)
+		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
+
+	cout<<"cannon movement"<<endl;
+	for (int i=0; i<move_pos.size(); i++)
+		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
+
+	cout<<"MOVE 10 by player 0"<<endl;
+	play_move(6, 6, 'B', 6, 3, 1);
+	print_board();
+
+	cout<<"MOVE 10 by player 1"<<endl;
+	play_move(5, 3, 'B', 5, 7, -1);
+	print_board();
+
+	cout<<"player 0 soldiers"<<endl;
+	for (int i=0; i<soldiers_number; i++)
+		cout<<i<<" "<<(*(soldiers1 + i))%N<<" "<<(*(soldiers1 + i))/N<<endl;
+
+	cout<<"player 1 soldiers"<<endl;
+	for (int i=0; i<soldiers_number; i++)
+		cout<<i<<" "<<(*(soldiers2 + i))%N<<" "<<(*(soldiers2 + i))/N<<endl;
 
 
 	return 0;
