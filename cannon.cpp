@@ -244,9 +244,41 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 		fire_at_f.emplace_back(itr->first,itr->second);
 }
 
-float evaluation_function()
+float evaluation_function(int show)
 {
-	return 1.0;
+	int black_townhalls = 0, white_townhalls = 0, black_soldiers = 0, white_soldiers = 0;
+	for (int i=0; i<8; i++)
+		for (int j=0; j<8; j++)
+		{
+			if (board[j][i] == 1)
+				white_townhalls++;
+			else if (board[j][i] == -1)
+				black_townhalls++;
+			else if (board[j][i] < 0)
+				black_soldiers++;
+			else if (board[j][i] > 0)
+				white_soldiers++;
+		}
+	float score;
+	if (white_townhalls == 2)
+		score = 10 - (4 - black_townhalls)*2;
+	else if (black_townhalls==4 && white_townhalls==4)
+		score = 5;
+	else if (black_townhalls==4 && white_townhalls==3)
+		score = 7;
+	else if (black_townhalls==3 && white_townhalls==3)
+		score = 5;
+	else if (black_townhalls==3 && white_townhalls==4)
+		score = 3;
+	else if (black_townhalls==2 && white_townhalls==3)
+		score = 2;
+	else
+		score = 0;
+	score*=100.0;
+	score += (black_soldiers-white_soldiers);
+	if (show==1)
+	cout<<"black_townhalls: "<<black_townhalls<<" white townhalls: "<<white_townhalls<<" black soldiers: "<<black_soldiers<<" white soldiers: "<<white_soldiers<<" score: "<<score<<endl;
+	return score;
 }
 void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// player_id has received this move from opponent
 {
@@ -286,6 +318,7 @@ void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// play
 
 float minimax(int player_id, int depth)
 {
+	// cout<<"depth: "<<depth<<endl;
 	float best_val = (player_id == -1)? INT_MIN : INT_MAX; 		// player -1 maximises, +1 minimises
 	float temp_val;
 	int* my_soldiers = (player_id==-1)? soldiers1 : soldiers2;
@@ -316,17 +349,26 @@ float minimax(int player_id, int depth)
 				killed = 1;
 				opp_soldier_killed = abs(temp)-2;
 				opp_old_position = *(opponent_soldiers + opp_soldier_killed);
+				if (opp_old_position != pos[k])
+				{
+					print_board();
+					cout<<"kuch galti at depth "<<depth<<endl;
+					cout<<"player "<<player_id<<" soldier id "<<i<<endl;
+					cout<<"new position: "<<i_<<" "<<j_<<endl;
+					cout<<"soldier killed "<<opp_soldier_killed<<" at position: "<<opp_old_position%N<<" "<<opp_old_position/N<<endl;
+					
+				}
 				*(opponent_soldiers + opp_soldier_killed) = -1;
 			}
 
 			// minimax
 			if (depth == 1)
-				temp_val = evaluation_function();
+				temp_val = evaluation_function(0);
 			else
 				temp_val = minimax(-1*player_id, depth-1);
-			if (player_id==-1 && temp_val>best_val)
+			if (player_id==-1 && temp_val>=best_val)
 				best_val = temp_val;
-			else if (player_id==1 && temp_val<best_val)
+			else if (player_id==1 && temp_val<=best_val)
 				best_val = temp_val;
 
 			// restoring board
@@ -348,7 +390,12 @@ float minimax(int player_id, int depth)
 		int new_pos = move_pos[i].second;
 		int old_position = *(my_soldiers + soldier_moved);
 		if (board[old_position/N][old_position%N] != (player_id*(soldier_moved+2)))
-			cout<<"SOME ERROR"<<endl;
+		{
+			cout<<"SOME ERROR at depth "<<depth<<" for player id "<< player_id<<endl;
+			cout<<"soldier to be moved: "<<soldier_moved<<" to cell "<<new_pos%N<<" "<<new_pos/N<<endl;
+			cout<<"currently at cell "<<old_position%N<<" "<<old_position/N<<endl;
+			cout<<"number on this cell "<<board[old_position/N][old_position%N];
+		}
 
 		// updating board
 		board[new_pos/N][new_pos%N] = player_id * (soldier_moved + 2);
@@ -359,12 +406,12 @@ float minimax(int player_id, int depth)
 
 		// minimax
 		if (depth == 1)
-			temp_val = evaluation_function();
+			temp_val = evaluation_function(0);
 		else
 			temp_val = minimax(-1*player_id, depth-1);
-		if (player_id==-1 && temp_val>best_val)
+		if (player_id==-1 && temp_val>=best_val)
 			best_val = temp_val;
-		else if (player_id==1 && temp_val<best_val)
+		else if (player_id==1 && temp_val<=best_val)
 			best_val = temp_val;
 
 		// restoring board
@@ -401,12 +448,12 @@ float minimax(int player_id, int depth)
 
 		//minimax
 		if (depth == 1)
-			temp_val = evaluation_function();
+			temp_val = evaluation_function(0);
 		else
 			temp_val = minimax(-1*player_id, depth-1);
-		if (player_id==-1 && temp_val>best_val)
+		if (player_id==-1 && temp_val>=best_val)
 			best_val = temp_val;
-		else if (player_id==1 && temp_val<best_val)
+		else if (player_id==1 && temp_val<=best_val)
 			best_val = temp_val;		
 
 		// restoration
@@ -435,6 +482,8 @@ string root_minimax(int player_id, int depth)
 	vector<int> pos;
 	for (int i=0; i<soldiers_number; i++)
 	{
+		// if (player_id==1)
+		// 	cout<<i<<" "<<*(my_soldiers+i)<<", ";
 		if (*(my_soldiers + i) == -1)
 			continue;
 		possible_moves2(i, player_id, pos);
@@ -461,21 +510,26 @@ string root_minimax(int player_id, int depth)
 
 			// minimax
 			if (depth == 1)
-				temp_val = evaluation_function();
+				temp_val = evaluation_function(0);
 			else
 				temp_val = minimax(-1*player_id, depth-1);
+			if (player_id == 1)
+				cout<<i<<" moved to "<<i_<<" "<<j_<<" gives score "<<temp_val<<endl;
 
-			if (player_id==-1 && temp_val>best_val)
+			// cout<<"soldier "<<i<<" moved to "<<pos[k]%N<<" "<<pos[k]/N<<" gives score "<<temp_val<<endl;
+			if (player_id==-1 && temp_val>=best_val)
 				{
 					best_val = temp_val;
 					soldier_to_move = i;
+					if (*(my_soldiers + soldier_to_move) < 0) cout<<"how is this possible"<<endl;
 					position_to_fire_or_move = pos[k];
 					fire_or_move = 'M';
 				}
-			else if (player_id==1 && temp_val<best_val)
+			else if (player_id==1 && temp_val<=best_val)
 				{
 					best_val = temp_val;
 					soldier_to_move = i;
+					if (*(my_soldiers + soldier_to_move) < 0) cout<<"how is this possible"<<endl;
 					position_to_fire_or_move = pos[k];
 					fire_or_move = 'M';
 				}
@@ -500,7 +554,7 @@ string root_minimax(int player_id, int depth)
 		int new_pos = move_pos[i].second;
 		int old_position = *(my_soldiers + soldier_moved);
 		if (board[old_position/N][old_position%N] != (player_id*(soldier_moved+2)))
-			cout<<"SOME ERROR"<<endl;
+			cout<<"SOME ERROR :("<<endl;
 
 		// updating board
 		board[new_pos/N][new_pos%N] = player_id * (soldier_moved + 2);
@@ -509,20 +563,22 @@ string root_minimax(int player_id, int depth)
 		// updating soldiers
 		*(my_soldiers + soldier_moved) = new_pos;
 
+		// cout<<"soldier "<<soldier_moved<<" moved to "<<new_pos%N<<" "<<new_pos/N<<" gives score "<<temp_val<<endl;
+
 		// minimax
 		if (depth == 1)
-			temp_val = evaluation_function();
+			temp_val = evaluation_function(0);
 		else
 			temp_val = minimax(-1*player_id, depth-1);
 
-		if (player_id==-1 && temp_val>best_val)
+		if (player_id==-1 && temp_val>=best_val)
 		{
 			best_val = temp_val;
 			soldier_to_move = soldier_moved;
 			position_to_fire_or_move = new_pos;
 			fire_or_move = 'M';
 		}
-		else if (player_id==1 && temp_val<best_val)
+		else if (player_id==1 && temp_val<=best_val)
 		{
 			best_val = temp_val;
 			soldier_to_move = soldier_moved;
@@ -556,23 +612,24 @@ string root_minimax(int player_id, int depth)
 
 		//minimax
 		if (depth == 1)
-			temp_val = evaluation_function();
+			temp_val = evaluation_function(0);
 		else
 			temp_val = minimax(-1*player_id, depth-1);
 
-		if (player_id==-1 && temp_val>best_val)
+		// cout<<"soldier "<<fire_at[i].second<<" shoots at "<<i_<<" "<<j_<<" gives score "<<temp_val<<endl;
+		if (player_id==-1 && temp_val>=best_val)
 		{
 			best_val = temp_val;
 			soldier_to_move = fire_at[i].second;
 			position_to_fire_or_move = bombed;
-			fire_or_move = 'F';
+			fire_or_move = 'B';
 		}
-		else if (player_id==1 && temp_val<best_val)
+		else if (player_id==1 && temp_val<=best_val)
 		{
 			best_val = temp_val;
 			soldier_to_move = fire_at[i].second;
 			position_to_fire_or_move = bombed;
-			fire_or_move = 'F';
+			fire_or_move = 'B';
 		}
 
 		// restoration
@@ -582,10 +639,21 @@ string root_minimax(int player_id, int depth)
 	}
 
 	// we have the best move
-	string best_move = "S " + to_string(*(my_soldiers+soldier_to_move)%N) + " " + to_string(*(my_soldiers+soldier_to_move)/N) + " " + to_string(fire_or_move) + " " + to_string(position_to_fire_or_move%N) + " " + to_string(position_to_fire_or_move/N);
+	if (*(my_soldiers + soldier_to_move) < 0)
+	{
+		cout<<player_id<<" "<<soldier_to_move<<" "<<fire_or_move<<endl;
+		cout<<"best value: "<<best_val<<endl;
+		cout<<"whyR?"<<endl;
+	}
+	if (position_to_fire_or_move < 0)
+		cout<<"whyR??"<<endl;
+	string best_move = "S " + to_string(*(my_soldiers+soldier_to_move)%N) + " " + to_string(*(my_soldiers+soldier_to_move)/N) + " " + (fire_or_move) + " " + to_string(position_to_fire_or_move%N) + " " + to_string(position_to_fire_or_move/N);
 	return best_move;
 }
-
+void play_move2(string s, int player_id)
+{
+	play_move(s[2]-48, s[4]-48, s[6], s[8]-48, s[10]-48, player_id);
+}
 int main(int argc, char const *argv[])
 {
 	// take opponent move string
@@ -612,182 +680,25 @@ int main(int argc, char const *argv[])
 		play_move(x1,y1,ch2,x2,y2,player_id);
 		print_board();
 	}
-	
-	cout<<"MOVE 1 by player 0"<<endl;
-	play_move(2, 5, 'M', 2, 4, 1);
-	print_board();
 
-	cout<<"MOVE 1 by player 1"<<endl;
-	play_move(3, 2, 'M', 4, 3, -1);
-	print_board();
+	string s;
+	for (int i=0; i<30; i++)
+	{
+		cout<<"ROUND "<<i<<endl;
+		cout<<"player 0"<<endl;
+		s = root_minimax(-1,max(i/5,1));
+		cout<<"move "<<s<<endl;
+		play_move2(s, 1);
+		print_board();
+		cout<<"score "<<evaluation_function(1)<<endl;
 
-	cout<<"MOVE 2 by player 0"<<endl;
-	play_move(0, 6, 'M', 1, 5, 1);
-	print_board();
-
-	cout<<"MOVE 2 by player 1"<<endl;
-	play_move(1, 2, 'M', 2, 3, -1);
-	print_board();
-
-	vector<int> cells;
-	possible_moves2(5,-1,cells);
-	cout<<"--------------"<<endl;
-	for (int i=0; i<cells.size(); i++)
-		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
-
-	vector<pair<int,int>> move_pos;
-	vector<pair<int,int>> fire_at_f;
-	cannon_related(-1, move_pos, fire_at_f);
-	cout<<"cannon movement"<<endl;
-	for (int i=0; i<move_pos.size(); i++)
-		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-	// -------
-	cout<<"MOVE 3 by player 0"<<endl;
-	play_move(2, 4, 'M', 2, 3, 1);
-	// for (int i=0; i<soldiers_number; i++)
-	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
-	print_board();
-
-	cout<<"MOVE 3 by player 1"<<endl;
-	play_move(3, 1, 'M', 4, 2, -1);
-	print_board();
-
-	cannon_related(-1,move_pos,fire_at_f);
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	// try change yahan pe --------------
-
-	cout<<"MOVE 4 by player 0"<<endl;
-	play_move(4, 5, 'B', 4, 3, 1);
-	// for (int i=0; i<soldiers_number; i++)
-	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
-	print_board();
-
-	cout<<"MOVE 4 by player 1"<<endl;
-	play_move(7, 1, 'M', 6, 2, -1);
-	print_board();
-
-	cout<<"MOVE 5 by player 0"<<endl;
-	play_move(2, 3, 'M', 2, 2, 1);
-	// for (int i=0; i<soldiers_number; i++)
-	// 	cout<<"soldier "<<i<<" at "<<soldiers2[i]<<endl;
-	print_board();
-
-	cannon_related(1,move_pos,fire_at_f);
-	cout<<"cannon movement"<<endl;
-	for (int i=0; i<move_pos.size(); i++)
-		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	// 
-
-	cout<<"MOVE 5 by player 1"<<endl;
-	play_move(3, 0, 'M', 3, 1, -1);
-	print_board();
-
-	cout<<"MOVE 6 by player 0"<<endl;
-	play_move(1, 5, 'M', 1, 4, 1);
-	print_board();
-
-	cannon_related(1,move_pos,fire_at_f);
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	cout<<"cannon movement"<<endl;
-	for (int i=0; i<move_pos.size(); i++)
-		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-
-	cannon_related(-1,move_pos,fire_at_f);
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	possible_moves2(5,-1,cells);
-	cout<<"--------------"<<endl;
-	for (int i=0; i<cells.size(); i++)
-		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
-
-	//
-
-	cout<<"MOVE 6 by player 1"<<endl;
-	play_move(4, 2, 'B', 2, 2, -1);
-	print_board();
-
-	cout<<"MOVE 7 by player 0"<<endl;
-	play_move(4, 5, 'B', 4, 2, 1);
-	print_board();
-
-	cout<<"MOVE 7 by player 1"<<endl;
-	play_move(5, 0, 'M', 5, 3, -1);
-	print_board();
-
-	cout<<"MOVE 8 by player 0"<<endl;
-	play_move(4, 7, 'M', 4, 4, 1);
-	print_board();
-
-	cout<<"MOVE 8 by player 1"<<endl;
-	play_move(5, 1, 'M', 5, 4, -1);
-	print_board();
-
-	possible_moves2(6,-1,cells);
-	cout<<"--------------"<<endl;
-	for (int i=0; i<cells.size(); i++)
-		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
-
-	possible_moves2(7,1,cells);
-	cout<<"--------------"<<endl;
-	for (int i=0; i<cells.size(); i++)
-		cout<<i<<" : "<<cells[i]%N<<" "<<cells[i]/N<<endl;
-
-	cannon_related(1,move_pos,fire_at_f);
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	cout<<"cannon movement"<<endl;
-	for (int i=0; i<move_pos.size(); i++)
-		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-
-	cout<<"MOVE 9 by player 0"<<endl;
-	play_move(4, 4, 'M', 4, 3, 1);
-	print_board();
-
-	cout<<"MOVE 9 by player 1"<<endl;
-	play_move(7, 0, 'M', 7, 1, -1);
-	print_board();
-
-	cannon_related(1,move_pos,fire_at_f);
-	cout<<"cannon firing"<<endl;
-	for (int i=0; i<fire_at_f.size(); i++)
-		cout<<"from "<<fire_at_f[i].second<<" hit at "<<(fire_at_f[i].first)%N<<" "<<(fire_at_f[i].first)/N<<endl;
-
-	cout<<"cannon movement"<<endl;
-	for (int i=0; i<move_pos.size(); i++)
-		cout<<move_pos[i].first<<" moved to: "<<move_pos[i].second%N<<" "<<move_pos[i].second/N<<endl;
-
-	cout<<"MOVE 10 by player 0"<<endl;
-	play_move(6, 6, 'B', 6, 3, 1);
-	print_board();
-
-	cout<<"MOVE 10 by player 1"<<endl;
-	play_move(5, 3, 'B', 5, 7, -1);
-	print_board();
-
-	cout<<"player 0 soldiers"<<endl;
-	for (int i=0; i<soldiers_number; i++)
-		cout<<i<<" "<<(*(soldiers1 + i))%N<<" "<<(*(soldiers1 + i))/N<<endl;
-
-	cout<<"player 1 soldiers"<<endl;
-	for (int i=0; i<soldiers_number; i++)
-		cout<<i<<" "<<(*(soldiers2 + i))%N<<" "<<(*(soldiers2 + i))/N<<endl;
+		cout<<"player 1"<<endl;
+		s = root_minimax(1,max(i/5,1));
+		cout<<"move "<<s<<endl;
+		play_move2(s, -1);
+		print_board();
+		cout<<"score "<<evaluation_function(1)<<endl;
+	}
 
 
 	return 0;
