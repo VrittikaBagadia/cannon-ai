@@ -19,6 +19,9 @@ int M=8, N=8;
 int soldiers1[12];
 int soldiers2[12];
 int soldiers_number = 12;
+int townhalls[3];
+int scount[3];
+// int townhalls1, townhalls2, scount1, scount2;
 
 // int player_number = 0; 		// -1 for black, 1 for white
 
@@ -59,6 +62,22 @@ void initialise()
 			board[j][i] = -1*counter;
 			counter++;
 		}
+	townhalls[0] = 4; townhalls[2] = 4;
+	scount[0] = 12; scount[2] = 12;
+}
+void test_initialise()
+{
+	for (int i=0; i<8; i++)
+		for (int j=0; j<8; j++)
+			board[i][j] = 0;
+	board[0][0] = 1;
+	board[2][0] = 1;
+	board[4][0] = 1;
+	board[6][0] = 1;
+	board[1][0]=2; board[1][1]=3; board[2][1]=5; board[3][1]=6; board[3][2]=7; board[5][0]=8; board[5][1]=9; board[6][3]=10; board[6][3]=13; board[7][0]=11; board[7][1]=12;
+
+	board[0][7]=-2; board[0][6]=-3; board[0][5]=-4; board[2][6]=-6; board[2][5]=-7; board[3][6]=-5; board[4][6]=-9; board[4][5]=-10; board[5][6]=-8; board[6][7]=-11; board[6][5]=-13;
+	townhalls[0]=4; townhalls[2]=4; scount[0]=11; scount[2]=11;
 }
 void possible_moves2(int soldier_number, int player_number, vector<int> &ans)
 {
@@ -246,38 +265,11 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 
 float evaluation_function(int show)
 {
-	int black_townhalls = 0, white_townhalls = 0, black_soldiers = 0, white_soldiers = 0;
-	for (int i=0; i<8; i++)
-		for (int j=0; j<8; j++)
-		{
-			if (board[j][i] == 1)
-				white_townhalls++;
-			else if (board[j][i] == -1)
-				black_townhalls++;
-			else if (board[j][i] < 0)
-				black_soldiers++;
-			else if (board[j][i] > 0)
-				white_soldiers++;
-		}
 	float score;
-	if (white_townhalls == 2)
-		score = 10 - (4 - black_townhalls)*2;
-	else if (black_townhalls==4 && white_townhalls==4)
-		score = 5;
-	else if (black_townhalls==4 && white_townhalls==3)
-		score = 7;
-	else if (black_townhalls==3 && white_townhalls==3)
-		score = 5;
-	else if (black_townhalls==3 && white_townhalls==4)
-		score = 3;
-	else if (black_townhalls==2 && white_townhalls==3)
-		score = 2;
-	else
-		score = 0;
-	score*=100.0;
-	score += (black_soldiers-white_soldiers);
+	score += (scount[0]-scount[2]);
+	score = 100*(townhalls[0]-townhalls[2]) + (scount[0]-scount[2]);
 	if (show==1)
-	cout<<"black_townhalls: "<<black_townhalls<<" white townhalls: "<<white_townhalls<<" black soldiers: "<<black_soldiers<<" white soldiers: "<<white_soldiers<<" score: "<<score<<endl;
+	cout<<"black_townhalls: "<<townhalls[0]<<" white townhalls: "<<townhalls[2]<<" black soldiers: "<<scount[0]<<" white soldiers: "<<scount[2]<<" score: "<<score<<endl;
 	return score;
 }
 void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// player_id has received this move from opponent
@@ -289,7 +281,12 @@ void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// play
 		int temp = board[y2][x2];
 		board[y2][x2] = 0;
 		if (temp!=0 && temp!=player_id)		// soldier killed
+		{
 			*(my_soldiers + temp*player_id - 2) = -1;
+			scount[player_id+1]-=1;
+		}
+		else if (temp==player_id)
+			townhalls[player_id+1]-=1;
 	}
 	else if (ch2 == 'M')
 	{
@@ -310,7 +307,12 @@ void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// play
 			}
 
 		if (temp!=0 && temp != player_id)		// my soldier killed
+		{
 			*(my_soldiers + temp*player_id-2) = -1;
+			scount[player_id+1]-=1;
+		}
+		else if (temp==player_id)
+			townhalls[player_id+1]-=1;
 	}
 	else 
 		cout<<"invalid format move from opponent"<<endl;
@@ -344,11 +346,15 @@ float minimax(int player_id, int depth)
 			// updating soldiers
 			*(my_soldiers + i) = change_to_int(i_,j_);
 			int opp_soldier_killed, opp_old_position, killed=0;
-			if (temp*player_id < 0 && temp != -1*player_id)		// opponent's soldier killed
+			if (temp == -1*player_id)							// opponent's townhall
+				townhalls[-1*player_id + 1]-=1;
+			// if (temp*player_id < 0 && temp != -1*player_id)		// opponent's soldier killed
+			else if (temp*player_id < 0)
 			{
 				killed = 1;
 				opp_soldier_killed = abs(temp)-2;
 				opp_old_position = *(opponent_soldiers + opp_soldier_killed);
+
 				if (opp_old_position != pos[k])
 				{
 					print_board();
@@ -359,6 +365,7 @@ float minimax(int player_id, int depth)
 					
 				}
 				*(opponent_soldiers + opp_soldier_killed) = -1;
+				scount[-1*player_id + 1]-=1;
 			}
 
 			// minimax
@@ -377,8 +384,13 @@ float minimax(int player_id, int depth)
 
 			// restoring soldiers
 			*(my_soldiers + i) = old_position;
+			if (temp == -1*player_id)
+				townhalls[-1*player_id+1]+=1;
 			if (killed)
+			{
+				scount[-1*player_id + 1] += 1;
 				*(opponent_soldiers + opp_soldier_killed) = opp_old_position;
+			}
 		}
 	}
 	vector<pair<int,int>> move_pos;
@@ -430,12 +442,15 @@ float minimax(int player_id, int depth)
 		int j_ = bombed / N;
 		int temp = board[j_][i_];
 		board[j_][i_] = 0;
-		if (temp != -1*player_id && temp!=0)		// opponent's soldier
+		if (temp == -1*player_id)		// opponent's townhall
+			townhalls[-1*player_id + 1]-=1;
+		else if (temp!=0)		// opponent's soldier
 		{
 			opp_soldier = abs(temp)-2;
 			if (*(opponent_soldiers + opp_soldier) != bombed)
 				cout<<"inconsistency in board and soldiers"<<endl;
 			*(opponent_soldiers + opp_soldier) = -1;
+			scount[-1*player_id + 1]-=1;
 		}
 		// if (bombed <= 0)	 	// townhall destroyed
 		// 	board[(-1*bombed)/ N][(-1*bombed) % N] = 0;
@@ -458,8 +473,13 @@ float minimax(int player_id, int depth)
 
 		// restoration
 		board[j_][i_] = temp;
-		if (temp != -1*player_id && temp!=0)
+		if (temp == -1*player_id)		// opponent's townhall
+			townhalls[-1*player_id + 1]+=1;
+		else if (temp!=0)
+		{
 			*(opponent_soldiers + opp_soldier) = bombed;
+			scount[-1*player_id + 1]+=1;
+		}
 		// if (bombed <= 0)
 		// 	board[(-1*bombed)/N][(-1*bombed)%N] = -1 * player_id;
 		// else
@@ -501,11 +521,16 @@ string root_minimax(int player_id, int depth)
 			// updating soldiers
 			*(my_soldiers+i) = change_to_int(i_,j_);
 			int opp_soldier_killed, opp_old_position, killed=0;
-			if (temp*player_id<0 && temp!=-1*player_id)
+			if (temp == -1*player_id)
+			{
+				townhalls[-1*player_id+1]-=1;
+			}
+			else if (temp*player_id<0)
 			{
 				killed = 1;
 				opp_soldier_killed = abs(temp)-2;
 				*(opponent_soldiers+opp_soldier_killed) = -1;
+				scount[-1*player_id+1] -= 1;
 			}
 
 			// minimax
@@ -513,8 +538,8 @@ string root_minimax(int player_id, int depth)
 				temp_val = evaluation_function(0);
 			else
 				temp_val = minimax(-1*player_id, depth-1);
-			if (player_id == 1)
-				cout<<i<<" moved to "<<i_<<" "<<j_<<" gives score "<<temp_val<<endl;
+			// if (player_id == 1)
+			// 	cout<<i<<" moved to "<<i_<<" "<<j_<<" gives score "<<temp_val<<endl;
 
 			// cout<<"soldier "<<i<<" moved to "<<pos[k]%N<<" "<<pos[k]/N<<" gives score "<<temp_val<<endl;
 			if (player_id==-1 && temp_val>=best_val)
@@ -540,8 +565,13 @@ string root_minimax(int player_id, int depth)
 
 			// restoring soldiers
 			*(my_soldiers + i) = old_position;
+			if (temp == -1*player_id)
+				townhalls[-1*player_id + 1]+=1;
 			if (killed)
+			{
+				scount[-1*player_id + 1]+=1;
 				*(opponent_soldiers + opp_soldier_killed) = change_to_int(i_,j_);
+			}
 
 		}
 	}
@@ -602,12 +632,17 @@ string root_minimax(int player_id, int depth)
 		int j_ = bombed / N;
 		int temp = board[j_][i_];
 		board[j_][i_] = 0;
-		if (temp != -1*player_id && temp!=0)		// opponent's soldier
+		if (temp == -1*player_id)		// opponent townhall
+		{
+			townhalls[-1*player_id+1] -= 1;
+		}
+		else if (temp!=0)		// opponent's soldier
 		{
 			opp_soldier = abs(temp)-2;
 			if (*(opponent_soldiers + opp_soldier) != bombed)
 				cout<<"inconsistency in board and soldiers :("<<endl;
 			*(opponent_soldiers + opp_soldier) = -1;
+			scount[-1*player_id+1]-=1;
 		}
 
 		//minimax
@@ -617,14 +652,14 @@ string root_minimax(int player_id, int depth)
 			temp_val = minimax(-1*player_id, depth-1);
 
 		// cout<<"soldier "<<fire_at[i].second<<" shoots at "<<i_<<" "<<j_<<" gives score "<<temp_val<<endl;
-		if (player_id==-1 && temp_val>=best_val)
+		if (player_id==-1 && (temp_val>best_val || (temp_val==best_val && temp!=0)))
 		{
 			best_val = temp_val;
 			soldier_to_move = fire_at[i].second;
 			position_to_fire_or_move = bombed;
 			fire_or_move = 'B';
 		}
-		else if (player_id==1 && temp_val<=best_val)
+		else if (player_id==1 && (temp_val<best_val | (temp_val==best_val && temp!=0)))
 		{
 			best_val = temp_val;
 			soldier_to_move = fire_at[i].second;
@@ -634,8 +669,13 @@ string root_minimax(int player_id, int depth)
 
 		// restoration
 		board[j_][i_] = temp;
-		if (temp != -1*player_id && temp!=0)
+		if (temp == -1*player_id)
+			townhalls[-1*player_id+1]+=1;
+		else if (temp!=0)
+		{
+			scount[-1*player_id+1] += 1;
 			*(opponent_soldiers + opp_soldier) = bombed;
+		}
 	}
 
 	// we have the best move
@@ -647,6 +687,10 @@ string root_minimax(int player_id, int depth)
 	}
 	if (position_to_fire_or_move < 0)
 		cout<<"whyR??"<<endl;
+
+	// IMPLEMENT THE BEST MOVE
+
+	// RETURN THE BEST MOVE
 	string best_move = "S " + to_string(*(my_soldiers+soldier_to_move)%N) + " " + to_string(*(my_soldiers+soldier_to_move)/N) + " " + (fire_or_move) + " " + to_string(position_to_fire_or_move%N) + " " + to_string(position_to_fire_or_move/N);
 	return best_move;
 }
@@ -668,36 +712,63 @@ int main(int argc, char const *argv[])
 
 	initialise();
 	// print_board();
-	int player_id=0, timelimit=10;
-	// cin>>player_id>>M>>N>>timelimit;
-	if (player_id == 0)
+	int player_id_recv=0, timelimit=10, player_id;
+	cin>>player_id_recv>>M>>N>>timelimit;
+	cout<<"Computer is player: "<<player_id_recv<<endl;
+	if (player_id_recv == 1)
 		player_id = -1;
+	if (player_id_recv == 2)
+		player_id = 1;
+	// char ch1,ch2;
+	// int x1,y1,x2,y2;
+	string move;
+	getline(cin, move);
 	if (player_id == 1)
 	{
-		char ch1,ch2;
-		int x1,y1,x2,y2;
-		cin>>ch1>>x1>>y1>>ch2>>x2>>y2;
-		play_move(x1,y1,ch2,x2,y2,player_id);
+		// cin>>ch1>>x1>>y1>>ch2>>x2>>y2;
+		// play_move(x1,y1,ch2,x2,y2,player_id);
+		cout<<"waiting for move from opponent"<<endl;
+		getline(cin, move);
+		// cout<<"move received: "<<move<<endl;
+		play_move2(move, player_id);
 		print_board();
 	}
 
 	string s;
-	for (int i=0; i<30; i++)
+	int i=0;
+	// for (int i=0; i<30; i++)
+	while(true)
 	{
-		cout<<"ROUND "<<i<<endl;
-		cout<<"player 0"<<endl;
-		s = root_minimax(-1,max(i/5,1));
-		cout<<"move "<<s<<endl;
-		play_move2(s, 1);
+		// cout<<"ROUND "<<i++<<endl;
+		// cout<<"player 0"<<endl;
+		// s = root_minimax(-1,min(i/5+2,4));
+		s = root_minimax(player_id,4);
+		cout<<"move played: "<<s<<endl;
+		play_move2(s, -1*player_id);
 		print_board();
-		cout<<"score "<<evaluation_function(1)<<endl;
+		evaluation_function(1);
 
-		cout<<"player 1"<<endl;
-		s = root_minimax(1,max(i/5,1));
-		cout<<"move "<<s<<endl;
-		play_move2(s, -1);
+		// cout<<"player 1"<<endl;
+		// s = root_minimax(1,min(i/5+2,4));
+		cout<<"waiting for move from opponent"<<endl;
+		getline(cin, move);
+		// cout<<"move received: "<<move<<endl;
+		// s = root_minimax(1,4);
+		// cout<<"move "<<s<<endl;
+		play_move2(move, player_id);
 		print_board();
-		cout<<"score "<<evaluation_function(1)<<endl;
+		evaluation_function(1);
+
+		if (townhalls[2] <= 2)
+		{
+			cout<<"Player 1 wins!";
+			break;
+		}
+		else if (townhalls[0] <= 2)
+		{
+			cout<<"Player 2 wins!";
+			break;
+		}
 	}
 
 
