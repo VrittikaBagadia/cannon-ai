@@ -13,24 +13,25 @@
 #include <time.h>
 using namespace std;
 
-#define INT_MAX 100000
-#define INT_MIN	-100000
-int board[8][8];
-int M=8, N=8;
-int soldiers1[12];
-int soldiers2[12];
-int soldiers_number = 12;
+#define MAXI 100000
+#define MINI -100000
+
+int board[10][10];
+int soldiers1[15];
+int soldiers2[15];
 int townhalls[3];
 int scount[3];
-// int townhalls1, townhalls2, scount1, scount2;
+
+int N, M;		// N is the number of rows and M is the number of columns
+int soldiers_number;
 
 // int player_number = 0; 		// -1 for black, 1 for white
 
 void print_board()
 {
-	for (int i=0; i<8; i++)
+	for (int i=0; i<M; i++)
 	{
-		for (int j=0; j<8; j++)
+		for (int j=0; j<N; j++)
 			cerr<<setw(3)<<board[i][j]<<" ";
 		cerr<<endl;
 	}
@@ -51,9 +52,23 @@ void initialise()
 	for (int i=0; i<M; i++)
 		for (int j=0; j<N; j++)
 			board[i][j] = 0;
-	board[7][1]=-1; board[7][3]=-1; board[7][5]=-1; board[7][7]=-1;
+
+	// player -1 townhalls
+	board[M-1][1]=-1; board[M-1][3]=-1; board[M-1][5]=-1; board[M-1][7]=-1;
+
+	// player +1 townhalls
 	board[0][0]=1; board[0][2]=1; board[0][4]=1; board[0][6]=1;
 
+	if (N==10)
+	{
+		board[M-1][9] = -1;
+		board[0][8] = 1;
+	}
+
+	// board[7][1]=-1; board[7][3]=-1; board[7][5]=-1; board[7][7]=-1;
+	// board[0][0]=1; board[0][2]=1; board[0][4]=1; board[0][6]=1;
+
+	// player +1 soldiers
 	int counter = 2;
 	for (int i=1; i<N; i+=2)
 		for (int j=0; j<3; j++)
@@ -61,16 +76,19 @@ void initialise()
 			soldiers2[counter-2]=change_to_int(i,j);
 			board[j][i] = counter++;
 		}
+
+	// player -1 soldiers
 	counter=2;
 	for (int i=0; i<N; i+=2)
-		for (int j=7; j>=5; j--)
+		for (int j=M-1; j>=M-3; j--)
 		{
 			soldiers1[counter-2]=change_to_int(i,j);
 			board[j][i] = -1*counter;
 			counter++;
 		}
-	townhalls[0] = 4; townhalls[2] = 4;
-	scount[0] = 12; scount[2] = 12;
+
+	townhalls[0] = N/2 ; townhalls[2] = N/2;
+	scount[0] = soldiers_number ; scount[2] = soldiers_number;
 }
 void possible_moves2(int soldier_number, int player_number, vector<int> &ans)
 {
@@ -110,7 +128,7 @@ void possible_moves2(int soldier_number, int player_number, vector<int> &ans)
 		if (board[y][x-1]*player_number < 0)
 		{
 			ans.push_back(change_to_int(x-1,y));
-			if (board[y][x+1] != -1*player_number)		// opponent's soldier and not townhall
+			if (board[y][x-1] != -1*player_number)		// opponent's soldier and not townhall
 				captured = 1;
 		}
 	}
@@ -213,7 +231,7 @@ void cannon_related_2(int player_number, int &number_of_cannons, int &number_of_
 			{
 				if (x == 1 && y==1)
 					continue;
-				if (x==6 && y==6)
+				if (x==(N-2) && y==(M-2))			// CHECK
 					continue;
 				number_of_cannons++;
 				if (y-2>=0 && x+2<N && board[y-2][x+2]==0)
@@ -235,9 +253,9 @@ void cannon_related_2(int player_number, int &number_of_cannons, int &number_of_
 				// NW-SE cannon
 			if (x-1>=0 && x+1<N && board[y-1][x-1]!=player_number && board[y-1][x-1]*player_number>0 && board[y+1][x+1]!=player_number && board[y+1][x+1]*player_number>0)
 			{
-				if (x==6 && y==1)
+				if (x==(N-2) && y==1)		// CHECK
 					continue;
-				if (x==1 && y==6)
+				if (x==1 && y==(M-2))		// CHECK
 					continue;
 				number_of_cannons++;
 				if (y-2>=0 && x-2>=0 && board[y-2][x-2]==0)
@@ -403,7 +421,7 @@ void cannon_related(int player_number, vector<pair<int,int>> &move_pos, vector<p
 // 	// cerr<<"black_townhalls: "<<townhalls[0]<<" white townhalls: "<<townhalls[2]<<" black soldiers: "<<scount[0]<<" white soldiers: "<<scount[2]<<" score: "<<score<<endl;
 // 	return score;
 // }
-void townhalls_attacked_by_soldiers(int &black_townhalls, int &white_townhalls)
+void townhalls_attacked_by_soldiers(int &black_townhalls, int &white_townhalls)			// CHANGE THIS
 {
 	black_townhalls=0;
 	white_townhalls=0;
@@ -445,43 +463,6 @@ void townhalls_attacked_by_soldiers(int &black_townhalls, int &white_townhalls)
 	}
 
 	// return (white_townhalls - black_townhalls);
-}
-
-float evaluation_function(int player_id)
-{
-	float score;
-	
-
-	int number_of_cannons0, number_of_cannons2, townhalls_under_fire0, townhalls_under_fire2, soldiers_under_fire0, soldiers_under_fire2, number_of_cannons_horiz0, number_of_cannons_horiz2=0;
-
-	
-	if (townhalls[0] <= 2)
-		return -1000;
-	if (townhalls[2] <= 2)
-		return 1000;
-
-	cannon_related_2(1, number_of_cannons2, number_of_cannons_horiz2 ,townhalls_under_fire0, soldiers_under_fire0);
-	cannon_related_2(-1, number_of_cannons0, number_of_cannons_horiz0, townhalls_under_fire2, soldiers_under_fire2);
-	int attacked_townhalls_black, attacked_townhalls_white;
-	townhalls_attacked_by_soldiers(attacked_townhalls_black, attacked_townhalls_white);
-
-	float black_score = 150*townhalls[0] +  15*scount[0] - 40*townhalls_under_fire0 - 40*attacked_townhalls_black;
-	float white_score = 150*townhalls[2] +  15*scount[2] - 40*townhalls_under_fire2 - 40*attacked_townhalls_white;
-
-	// if (player_id == -1)
-	// 	score = 0.6*black_score - 0.4*white_score;
-	// else
-	// 	score = 0.4*black_score - 0.6*white_score;
-	
-	// score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
-
-	score = black_score - white_score;
-	score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
-
-	if (min(scount[0],scount[2]) <=4)
-		score += 15*(scount[0] - scount[2]);
-	
-	return score;
 }
 
 void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// player_id has received this move from opponent
@@ -530,12 +511,57 @@ void play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// play
 		cerr<<"invalid format move from opponent"<<endl;
 }
 
+void play_move2(string s, int player_id)
+{
+	play_move(s[2]-48, s[4]-48, s[6], s[8]-48, s[10]-48, player_id);
+}
+
+float evaluation_function(int player_id)
+{
+	float score;
+	
+
+	int number_of_cannons0, number_of_cannons2, townhalls_under_fire0, townhalls_under_fire2, soldiers_under_fire0, soldiers_under_fire2, number_of_cannons_horiz0, number_of_cannons_horiz2=0;
+
+	
+	// if (townhalls[0] <= 2)
+	// 	return -1000;
+	// if (townhalls[2] <= 2)
+	// 	return 1000;
+
+	cannon_related_2(1, number_of_cannons2, number_of_cannons_horiz2 ,townhalls_under_fire0, soldiers_under_fire0);
+	cannon_related_2(-1, number_of_cannons0, number_of_cannons_horiz0, townhalls_under_fire2, soldiers_under_fire2);
+	int attacked_townhalls_black, attacked_townhalls_white;
+	townhalls_attacked_by_soldiers(attacked_townhalls_black, attacked_townhalls_white);
+
+	float black_score = 150*townhalls[0] +  15*scount[0] - 40*townhalls_under_fire0 - 40*attacked_townhalls_black;
+	float white_score = 150*townhalls[2] +  15*scount[2] - 40*townhalls_under_fire2 - 40*attacked_townhalls_white;
+
+	// if (player_id == -1)
+	// 	score = 0.6*black_score - 0.4*white_score;
+	// else
+	// 	score = 0.4*black_score - 0.6*white_score;
+	
+	// score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
+
+	score = black_score - white_score;
+	score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
+
+	if (min(scount[0],scount[2]) <=4)
+		score += 15*(scount[0] - scount[2]);
+	
+	if (townhalls[0] <= 2)
+		return (-1000+score);
+	if (townhalls[2] <= 2)
+		return (1000+score);
+	return score;
+}
+
 float minimax(int player_id, int depth , float alpha, float beta)
 {
 	// cerr<<"depth: "<<depth<<endl;
-	float best_val = (player_id == -1)? INT_MIN : INT_MAX; 		// player -1 maximises, +1 minimises
-	
-	float temp_val;
+	float best_val = (player_id == -1)? MINI : MAXI; 		// player -1 maximises, +1 minimises
+	float best_val_static = -1*best_val; 	float temp_val;
 	int* my_soldiers = (player_id==-1)? soldiers1 : soldiers2;
 	int* opponent_soldiers = (player_id==-1)? soldiers2 : soldiers1;
 	vector<int> pos;
@@ -546,7 +572,6 @@ float minimax(int player_id, int depth , float alpha, float beta)
 		if (*(my_soldiers+i) == -1)
 			continue;
 		possible_moves2(i, player_id, pos);
-		
 		for (int k=0; k<pos.size(); k++)
 		{
 			// soldier i of player_id moves to i_,j_
@@ -646,7 +671,7 @@ float minimax(int player_id, int depth , float alpha, float beta)
 
 		// minimax
 		if (min(townhalls[0],townhalls[2]) <= 2)
-				temp_val = evaluation_function(player_id);
+			temp_val = evaluation_function(player_id);
 
 		else if (depth == 0)
 			temp_val = evaluation_function(player_id);
@@ -699,7 +724,7 @@ float minimax(int player_id, int depth , float alpha, float beta)
 		}
 		//minimax
 		if (min(townhalls[0],townhalls[2]) <= 2)
-				temp_val = evaluation_function(player_id);
+			temp_val = evaluation_function(player_id);
 
 		else if (depth == 0)
 			temp_val = evaluation_function(player_id);
@@ -736,6 +761,9 @@ float minimax(int player_id, int depth , float alpha, float beta)
 		// 	board[opp_position/N][opp_position%N] = -1 * player_id * bombed;
 		// }
 	}
+	// return best_val;
+	if (best_val == -1*best_val_static)
+		return evaluation_function(player_id);
 	return best_val;
 
 }
@@ -746,17 +774,30 @@ string root_minimax(int player_id, int depth)
 
 	int soldier_to_move, position_to_fire_or_move;
 	char fire_or_move;
-	float best_val = (player_id == -1)? INT_MIN : INT_MAX;
-	float best_val_static = best_val;
-	float temp_val;
+	float best_val = (player_id == -1)? MINI : MAXI;
+	float best_val_static = best_val; 	float temp_val;
 	int* my_soldiers = (player_id == -1)? soldiers1 : soldiers2;
 	int* opponent_soldiers = (player_id == -1)? soldiers2 : soldiers1;
 	vector<int> pos;
 
-	float alpha = INT_MIN;
-	float beta = INT_MAX;
+	float alpha = MINI;
+	float beta = MAXI;
+ 	// int position, xposition, yposition,flag=0,number;
+	// if (scount[1+player_id] == 1)
+	// {
+	// 	flag=1;
+	// 	for (int i=0; i<soldier_number; i++)
+	// 		if (opponent_soldiers[i] != -1)
+	// 			break;
+	// 	number = i;
+	// 	position = opponent_soldiers[i];
+	// 	xposition = opponent_soldiers[i]%N;
+	// 	yposition = opponent_soldiers[i]/N;
 
-
+	// }
+	int flag = 0;
+	if (scount[1+player_id] == 1)
+		flag = 1;
 
 	for (int i=0; i<soldiers_number; i++)
 	{
@@ -789,6 +830,8 @@ string root_minimax(int player_id, int depth)
 				opp_soldier_killed = abs(temp)-2;
 				*(opponent_soldiers+opp_soldier_killed) = -1;
 				scount[-1*player_id+1] -= 1;
+				if (flag == 1)
+				return ("S "+to_string(old_position%N) + " " + to_string(old_position/N) +" M "+to_string(i_)+" "+to_string(j_));
 			}
 
 			// minimax
@@ -799,21 +842,21 @@ string root_minimax(int player_id, int depth)
 				temp_val = evaluation_function(player_id);
 			else
 			{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 5 && counter==0)
 				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"5 sec passed, depth changed to "<<depth-1<<endl;
 					counter = 1;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter<=1)
 				{
-					cerr<<"15 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
 					counter++;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15)
 				{
-					cerr<<"20 sec passed"<<endl;
+					cerr<<"15 sec passed"<<endl;
 					depth = 3;
 				}
 				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
@@ -894,21 +937,21 @@ string root_minimax(int player_id, int depth)
 			temp_val = evaluation_function(player_id);
 		else
 		{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 5 && counter==0)
 				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"5 sec passed, depth changed to "<<depth-1<<endl;
 					counter = 1;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter<=1)
 				{
-					cerr<<"15 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
 					counter++;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15)
 				{
-					cerr<<"20 sec passed"<<endl;
+					cerr<<"15 sec passed"<<endl;
 					depth = 3;
 				}
 			temp_val = minimax(-1*player_id, depth-1, alpha, beta);
@@ -942,9 +985,6 @@ string root_minimax(int player_id, int depth)
 			alpha = max(alpha, temp_val);
 		else
 			beta = min(beta, temp_val);
-		// if (alpha >= beta)
-		// 	return("S " + to_string(*(my_soldiers+soldier_moved)%N) + " " + to_string(*(my_soldiers+soldier_moved)/N) + " M " + to_string(new_pos%N) + " " + to_string(new_pos/N));
-
 	}
 	// cerr<<"Cannon movements done "<<((float)(clock()-t))/(CLOCKS_PER_SEC)<<endl;
 	int added = 0;
@@ -974,6 +1014,9 @@ string root_minimax(int player_id, int depth)
 				cerr<<"inconsistency in board and soldiers :("<<endl;
 			*(opponent_soldiers + opp_soldier) = -1;
 			scount[-1*player_id+1]-=1;
+
+			if (flag == 1)
+			return("S "+to_string((fire_at[i].second)%N)+" "+to_string((fire_at[i].second)/N)+ " B "+to_string(i_)+" "+to_string(j_));
 		}
 
 		//minimax
@@ -984,22 +1027,22 @@ string root_minimax(int player_id, int depth)
 			temp_val = evaluation_function(player_id);
 		else
 		{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 5 && counter==0)
 				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"5 sec passed, depth changed to "<<depth-1<<endl;
 					counter = 1;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter<=1)
 				{
-					cerr<<"15 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
 					counter++;
 					// cerr<<counter<<endl;
 					depth--;
 				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
+				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15)
 				{
-					cerr<<"20 sec passed"<<endl;
+					cerr<<"15 sec passed"<<endl;
 					depth = 3;
 				}
 			temp_val = minimax(-1*player_id, depth-1, alpha, beta);
@@ -1061,30 +1104,42 @@ string root_minimax(int player_id, int depth)
 	// cerr<<"TIMING ANALYSIS at depth "<<depth<<endl;
 	// cerr<<"possible_moves2_time: "<<possible_moves2_time<<" ,cannon_related_time: "<<cannon_related_time<<" ,evaluation_function_time: "<<evaluation_function_time<<endl;
 	cerr<<best_move<<endl;
+	play_move2(best_move, -1*player_id);
 	return best_move;
 }
-void play_move2(string s, int player_id)
-{
-	play_move(s[2]-48, s[4]-48, s[6], s[8]-48, s[10]-48, player_id);
-}
+
 int main(int argc, char const *argv[])
 {
-	initialise();
 	int player_id_recv=0, timelimit=10, player_id;
+
+	// DOUBT - take in N then M ya ulta?
 	cin>>player_id_recv>>M>>N>>timelimit;
-	cerr<<"Computer is player: "<<player_id_recv<<endl;
+	soldiers_number = 3 * (N/2);
+	// cerr<<"Number of soldiers: "<<soldiers_number<<endl;
+	// cerr<<"Computer is player: "<<player_id_recv<<endl;
 	if (player_id_recv == 1)
 		player_id = -1;
 	if (player_id_recv == 2)
 		player_id = 1;
+
+	// cerr<<"I am player_id "<<player_id<<endl;
+	clock_t t, t1, t2;
+	float time_taken,total_time=0,opponent_time;
+
+	initialise();
+	// print_board();
+
 	string move;
 	getline(cin, move);
 	if (player_id == 1)
 	{
 		cerr<<"waiting for move from opponent"<<endl;
+		t1 = clock();
 		getline(cin, move);
 		while (move == "")
 			getline(cin, move);
+		t2 = clock();
+		opponent_time += ((float)(t2-t1))/CLOCKS_PER_SEC;
 		play_move2(move, player_id);
 		print_board();
 	}
@@ -1093,76 +1148,73 @@ int main(int argc, char const *argv[])
 	int i=0;
 	int minimax_depth = 4,fast_count=0,fast_cutoff=3;
 	float low_cutoff=1,high_cutoff=8;
-	clock_t t;
-	float time_taken,total_time=0;
 	while(true)
 	{
-		// cerr<<"ROUND "<<i++<<endl;
-		// cerr<<"player 0"<<endl;
-		// s = root_minimax(-1,min(i/5+2,4));
 		i++;
 		t = clock();
-		// int a = (player_id==-1)?scount[0]:scount[2];
 		s = root_minimax(player_id,minimax_depth);
+		cout<<s<<endl;
 		time_taken = (clock()-t)/(float)CLOCKS_PER_SEC;
 		cerr<<"time taken: "<<time_taken<<endl;
 		total_time+=time_taken;
+		time_left = timelimit - total_time;
 
-		if (fast_count==1 && minimax_depth==3)
-		{
-			minimax_depth++;
-			fast_count=0;
-		}
-		if( total_time < 20 )
-		{
-			low_cutoff=2;
-			high_cutoff=8;
-		}
-		else if( total_time < 60 )
-		{
-			low_cutoff=3;
-			high_cutoff=6;
-		}
-		else if( total_time < 80)
-		{
-			low_cutoff = 1.5;
-			high_cutoff = 6;
-			fast_cutoff =5;
-		}
+		if ((time_left < 10) && (opponent_time > 10))
+			minimax_depth = 3;
 		else
 		{
-			low_cutoff=0;
-			high_cutoff =2;
+			if (fast_count==2 && minimax_depth==3)
+			{
+				minimax_depth++;
+				cerr<<"Depth Increased to "<<minimax_depth<<endl;
+				fast_count=0;
+			}
+			if( time_left > 70 )
+			{
+				low_cutoff=2;
+				high_cutoff=8;
+			}
+			else if( time_left > 30 )
+			{
+				low_cutoff=3;
+				high_cutoff=6;
+			}
+			else if( total_time > 10)
+			{
+				low_cutoff = 1.5;
+				high_cutoff = 6;
+				fast_cutoff =5;
+			}
+			else
+			{
+				low_cutoff=0;
+				high_cutoff =2;
+			}
+			if(time_taken<low_cutoff)
+				fast_count++;
+			if(fast_count >= fast_cutoff)
+			{
+				fast_count =0;
+				minimax_depth = min(minimax_depth+1, 7);
+				cerr<<"Depth Increased to "<<minimax_depth<<endl;
+			}
+			if(time_taken> high_cutoff)
+			{
+				minimax_depth--;
+				cerr<<"Depth decreased to "<<minimax_depth<<endl;
+				fast_count = 0;
+			}				
 		}
-
-		if(time_taken<low_cutoff)
-			fast_count++;
-		if(fast_count >= fast_cutoff)
-		{
-			fast_count =0;
-			minimax_depth++;
-			cerr<<"Depth Increased to "<<minimax_depth<<endl;
-		}
-		if(time_taken> high_cutoff)
-		{
-			minimax_depth--;
-			cerr<<"Depth decreased to "<<minimax_depth<<endl;
-			fast_count = 0;
-		}				
-		cout<<s<<endl;
-		play_move2(s, -1*player_id);
-		// print_board();
-		// evaluation_function(1);
 
 		// cerr<<"waiting for move from opponent"<<endl;
+		t1 = clock();
 		getline(cin, move);
 		while (move == "")
 			getline(cin, move);
+		t2 = clock();
+		opponent_time += (t2-t1)/(float)CLOCKS_PER_SEC;
 		// cerr<<"move received: "<<move<<endl;
 		play_move2(move, player_id);
-		// print_board();
-		// evaluation_function(1);
-
 		if (townhalls[2] <= 2)
 		{
 			cerr<<"Player 1 wins!";
@@ -1173,94 +1225,6 @@ int main(int argc, char const *argv[])
 			cerr<<"Player 2 wins!";
 			break;
 		}
-		
 	}
 	return 0;
 }
-// int main(int argc, char const *argv[])
-// {
-	
-// 	cerr<<"here\n";
-// 	initialise();
-// 	play_move2("S 0 7 M 1 6",1);
-// 	play_move2("S 3 0 M 3 3",-1);
-// 	play_move2("S 2 5 M 2 4",1);
-// 	play_move2("S 3 1 M 2 2",-1);
-// 	play_move2("S 4 5 B 1 2",1);
-// 	play_move2("S 5 2 B 5 6",-1);
-
-// 	play_move2("S 4 5 M 4 4",1);
-// 	play_move2("S 5 3 M 4 4",-1);
-// 	play_move2("S 4 6 M 3 5",1);
-// 	play_move2("S 3 2 B 3 5",-1);
-// 	play_move2("S 2 6 M 3 5",1);
-// 	play_move2("S 3 2 B 3 5",-1);
-// 	play_move2("S 2 5 M 2 4",1);
-
-// 	play_move2("S 4 4 M 4 5",-1);
-// 	play_move2("S 2 4 M 3 3",1);
-// 	play_move2("S 4 5 M 4 6",-1);
-// 	play_move2("S 3 3 M 3 2",1);
-
-
-// 	{"action": "NORMAL", "meta": "", "data": } Received from client 0
-// {"action": "NORMAL", "meta": "", "data": } Received from client 1
-// {"action": "NORMAL", "meta": "", "data": } Received from client 0
-// {"action": "NORMAL", "meta": "", "data": } Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 2 4 M 3 3"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 3 2 M 3 3"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 4 5 M 4 4"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 3 3 M 4 4"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 4 6 M 4 5"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 4 4 M 4 5"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 4 7 M 4 6"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 4 5 M 4 6"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 6 B 4 6"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 2 2 M 1 3"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 5 M 0 4"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 1 3 M 0 4"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 6 M 0 5"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 0 4 M 0 5"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 1 6 M 0 5"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 0 M 5 3"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 5 M 0 4"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 1 M 5 4"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 6 5 M 5 4"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 3 M 5 4"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 6 6 M 5 5"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 4 M 5 5"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 6 7 M 5 6"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 5 M 5 6"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 4 M 0 3"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 5 6 M 5 7"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 0 3 M 1 2"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 1 0 M 2 1"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 1 2 M 1 1"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 2 1 M 2 2"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 1 1 M 1 0"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 2 2 M 2 3"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 1 0 M 0 0"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 2 3 M 2 4"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 2 6 M 2 5"} Received from client 0
-// {"action": "NORMAL", "meta": "", "data": "S 2 4 M 2 5"} Received from client 1
-// {"action": "NORMAL", "meta": "", "data": "S 2 7 M 2 6"} Received from client 0
-	
-// 	// play_move2("S 4 6 M 3 7",-1);
-// 	// play_move2("S 3 2 M 3 1",1);
-// 	// play_move2("S 3 7 M 2 7",-1);
-// 	// play_move2("S 3 1 M 2 0",1);
-// 	// play_move2("S 7 3 B 7 7",-1);
-// 	// play_move2("S 4 2 M 3 1",1);
-// 	print_board();
-// 	cout<<"player -1 soldiers \n";
-// 	for (int i=0; i<soldiers_number; i++)
-// 		cout<<"("<<soldiers1[i]%N<<","<<soldiers1[i]/N<<") ";
-// 	cout<<"\nplayer +1 soldiers\n";
-// 	for (int i=0; i<soldiers_number; i++)
-// 		cout<<"("<<soldiers2[i]%N<<","<<soldiers2[i]/N<<") ";
-// 	cout<<"\n--------------\n";
-// 	// int player_id = 1;
-// 	root_minimax(1,5);
-
-// 		return 0;
-// }
