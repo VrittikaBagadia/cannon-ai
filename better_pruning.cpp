@@ -643,10 +643,334 @@ float minimax(int player_id, int depth , float alpha, float beta)
 	// cerr<<"depth: "<<depth<<endl;
 	float best_val = (player_id == -1)? MINI : MAXI; 		// player -1 maximises, +1 minimises
 	float best_val_static = -1*best_val; 
-	float temp_val;
+	float temp_val, temp_variable;
 	int* my_soldiers = (player_id==-1)? soldiers1 : soldiers2;
 	int* opponent_soldiers = (player_id==-1)? soldiers2 : soldiers1;
 	vector<int> pos;
+
+	vector<pair<float,vector<int> > > mapped_evaluation;
+	mapped_evaluation.clear();
+
+	for (int i=0; i<soldiers_number; i++)
+	{
+		if (*(my_soldiers+i) == -1)
+			continue;
+		possible_moves2(i, player_id, pos);
+		for (int k=0; k<pos.size(); k++)
+		{
+			// soldier i of player_id moves to i_,j_
+			int i_ = pos[k]%N;
+			int j_ = pos[k]/N;
+			int old_position = *(my_soldiers+i);
+			int temp = board[j_][i_];
+
+			// updating the board
+			board[j_][i_] = player_id * (i+2);
+			board[old_position/N][old_position%N] = 0;
+
+			// updating soldiers
+			*(my_soldiers + i) = change_to_int(i_,j_);
+			int opp_soldier_killed, opp_old_position, killed=0;
+			if (temp == -1*player_id)							// opponent's townhall
+				townhalls[-1*player_id + 1]-=1;
+			// if (temp*player_id < 0 && temp != -1*player_id)		// opponent's soldier killed
+			else if (temp*player_id < 0)
+			{
+				killed = 1;
+				opp_soldier_killed = abs(temp)-2;
+				opp_old_position = *(opponent_soldiers + opp_soldier_killed);
+				*(opponent_soldiers + opp_soldier_killed) = -1;
+				scount[-1*player_id + 1]-=1;
+			}
+			
+			pair<float,vector<int> > intermediate;
+			intermediate.first = evaluation_function(player_id);
+			intermediate.second.clear();
+			intermediate.second.push_back(0);
+			intermediate.second.push_back(i);
+			intermediate.second.push_back(pos[k]);
+
+			// restoring board
+			board[old_position/N][old_position%N] = player_id * (i+2);
+			board[j_][i_] = temp;
+			// restoring soldiers
+			*(my_soldiers + i) = old_position;
+			if (temp == -1*player_id)
+				townhalls[-1*player_id+1]+=1;
+			if (killed)
+			{
+				scount[-1*player_id + 1] += 1;
+				*(opponent_soldiers + opp_soldier_killed) = opp_old_position;
+			}
+		}
+	}
+
+	vector<pair<int,int>> move_pos;
+	vector<pair<int,int>> fire_at;			// hit 1st int cell from second soldier
+	cannon_related(player_id, move_pos, fire_at);
+	for (int i=0; i<move_pos.size(); i++)
+	{
+		int soldier_moved = move_pos[i].first;
+		int new_pos = move_pos[i].second;
+		int old_position = *(my_soldiers + soldier_moved);
+
+		// updating board
+		board[new_pos/N][new_pos%N] = player_id * (soldier_moved + 2);
+		board[old_position/N][old_position%N] = 0;
+		// updating soldiers
+		*(my_soldiers + soldier_moved) = new_pos;
+
+		pair<float,vector<int> > intermediate;
+		intermediate.first = evaluation_function(player_id);
+		intermediate.second.clear();
+		intermediate.second.push_back(1);
+		intermediate.second.push_back(soldier_moved);
+		intermediate.second.push_back(new_pos);
+
+		// restoring board
+		board[new_pos/N][new_pos%N] = 0;
+		board[old_position/N][old_position%N] = player_id * (soldier_moved + 2);
+		// restoring soldiers
+		*(my_soldiers + soldier_moved) = old_position;
+	}
+	int added=0;
+	for (int i=0; i<fire_at.size(); i++)
+	{
+		int opp_soldier;
+		int bombed = fire_at[i].first;
+		// board and soldiers update
+		int i_ = bombed % N;
+		int j_ = bombed / N;
+		int temp = board[j_][i_];
+		if (added ==1 && temp==0)
+			continue;
+		if (temp==0)
+			added=1;
+		board[j_][i_] = 0;
+		if (temp == -1*player_id)				// opponent's townhall
+			townhalls[-1*player_id + 1]-=1;
+		else if (temp!=0)						// opponent's soldier
+		{
+			opp_soldier = abs(temp)-2;
+			*(opponent_soldiers + opp_soldier) = -1;
+			scount[-1*player_id + 1]-=1;
+		}
+
+		pair<float,vector<int> > intermediate;
+		intermediate.first = evaluation_function(player_id);
+		intermediate.second.clear();
+		intermediate.second.push_back(2);
+		intermediate.second.push_back(bombed);
+		// intermediate.second.push_back();
+
+		// restoration
+		board[j_][i_] = temp;
+		if (temp == -1*player_id)		// opponent's townhall
+			townhalls[-1*player_id + 1]+=1;
+		else if (temp!=0)
+		{
+			*(opponent_soldiers + opp_soldier) = bombed;
+			scount[-1*player_id + 1]+=1;
+		}
+	}
+
+	if (player_id == -1)
+		sort(mapped_evaluation.begin(), mapped_evaluation.end(), greater_float);
+	else
+		sort(mapped_evaluation.begin(), mapped_evaluation.end());
+
+	// execute these moves
+	for (int ind = 0; ind < mapped_evaluation.size(); ind++)
+	{
+		if (mapped_evaluation[ind].second[0] == 0)
+		{
+			// soldier movement
+			int i = mapped_evaluation[ind].second[1];
+			int pos[k] = mapped_evaluation[ind].second[2];
+
+			int i_ = pos[k]%N;
+			int j_ = pos[k]/N;
+			int old_position = *(my_soldiers+i);
+			int temp = board[j_][i_];
+
+			// updating the board
+			board[j_][i_] = player_id * (i+2);
+			board[old_position/N][old_position%N] = 0;
+			// updating soldiers
+			*(my_soldiers + i) = change_to_int(i_,j_);
+			int opp_soldier_killed, opp_old_position, killed=0;
+			if (temp == -1*player_id)							// opponent's townhall
+				townhalls[-1*player_id + 1]-=1;
+			else if (temp*player_id < 0)
+			{
+				killed = 1;
+				opp_soldier_killed = abs(temp)-2;
+				opp_old_position = *(opponent_soldiers + opp_soldier_killed);
+				*(opponent_soldiers + opp_soldier_killed) = -1;
+				scount[-1*player_id + 1]-=1;
+			}
+			// update hashvalue
+			hashvalue ^= table[old_position][player_id+1];			// old position se hatao
+			hashvalue ^= table[pos[k]][player_id+1];				// new position pe daalo
+			if (temp == -1*player_id)								// opponent townhall at new position
+				hashvalue ^= table[pos[k]][temp+2];					
+			else if (killed == 1)									// opponent soldier at new position
+				hashvalue ^= table[pos[k]][-1*player_id + 1];
+
+			// minimax
+			if (min(townhalls[0],townhalls[2]) <= 2)
+				temp_val = evaluation_function(player_id);
+			else if (depth == 0)
+				temp_val = evaluation_function(player_id);
+			else
+				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
+
+			if (player_id==-1 && temp_val>=best_val)
+				best_val = temp_val;
+			else if (player_id==1 && temp_val<=best_val)
+				best_val = temp_val;
+
+			// restore
+			hashvalue ^= table[old_position][player_id+1];			// old position se hatao
+			hashvalue ^= table[pos[k]][player_id+1];				// new position pe daalo
+			if (temp == -1*player_id)								// opponent townhall at new position
+				hashvalue ^= table[pos[k]][temp+2];					
+			else if (killed == 1)									// opponent soldier at new position
+				hashvalue ^= table[pos[k]][-1*player_id + 1];
+			// restoring board
+			board[old_position/N][old_position%N] = player_id * (i+2);
+			board[j_][i_] = temp;
+			// restoring soldiers
+			*(my_soldiers + i) = old_position;
+			if (temp == -1*player_id)
+				townhalls[-1*player_id+1]+=1;
+			if (killed)
+			{
+				scount[-1*player_id + 1] += 1;
+				*(opponent_soldiers + opp_soldier_killed) = opp_old_position;
+			}
+
+			// alpha beta pruning
+			if (player_id == -1)
+				alpha = max(alpha, temp_val);
+			else 
+				beta = min(beta, temp_val);
+			if (alpha > beta)
+				return temp_val;
+		}
+		else if (mapped_evaluation[ind].second[0] == 1)
+		{
+			// cannon movement
+			int soldier_moved = mapped_evaluation[ind].second[1];
+			int new_pos = mapped_evaluation[ind].second[2];
+			int old_position = *(my_soldiers + soldier_moved);
+
+			// updating board
+			board[new_pos/N][new_pos%N] = player_id * (soldier_moved + 2);
+			board[old_position/N][old_position%N] = 0;
+			// updating soldiers
+			*(my_soldiers + soldier_moved) = new_pos;
+			// update hash value
+			hashvalue ^= table[old_position][player_id+1];			// old position se hatao
+			hashvalue ^= table[new_pos][player_id+1];				// new position pe daalo
+
+			// minimax
+			if (min(townhalls[0],townhalls[2]) <= 2)
+				temp_val = evaluation_function(player_id);
+			else if (depth == 0)
+				temp_val = evaluation_function(player_id);
+			else
+				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
+
+			if (player_id==-1 && temp_val>=best_val)
+				best_val = temp_val;
+			else if (player_id==1 && temp_val<=best_val)
+				best_val = temp_val;
+
+			// restore hash value
+			hashvalue ^= table[old_position][player_id+1];			// old position se hatao
+			hashvalue ^= table[new_pos][player_id+1];				// new position pe daalo
+			// restoring board
+			board[new_pos/N][new_pos%N] = 0;
+			board[old_position/N][old_position%N] = player_id * (soldier_moved + 2);
+			// restoring soldiers
+			*(my_soldiers + soldier_moved) = old_position;
+
+			if (player_id == -1)
+				alpha = max(alpha, temp_val);
+			else
+				beta = min(beta, temp_val);
+			if (alpha > beta)
+				return temp_val;
+		}
+		else
+		{
+			// cannon firing
+			int bombed = mapped_evaluation[ind].second[1];
+			// board and soldiers update
+			int i_ = bombed % N;
+			int j_ = bombed / N;
+			int temp = board[j_][i_];
+			board[j_][i_] = 0;
+			if (temp == -1*player_id)		// opponent's townhall
+				townhalls[-1*player_id + 1]-=1;
+			else if (temp!=0)		// opponent's soldier
+			{
+				opp_soldier = abs(temp)-2;
+				if (*(opponent_soldiers + opp_soldier) != bombed)
+					cerr<<"inconsistency in board and soldiers"<<endl;
+				*(opponent_soldiers + opp_soldier) = -1;
+				scount[-1*player_id + 1]-=1;
+			}
+
+			// update hash value
+			if (temp == -1*player_id)
+				hashvalue ^= table[bombed][-1*player_id + 2];
+			else if (temp != 0)
+				hashvalue ^= table[bombed][-1*player_id + 1];
+
+			//minimax
+			if (min(townhalls[0],townhalls[2]) <= 2)
+				temp_val = evaluation_function(player_id);
+
+			else if (depth == 0)
+				temp_val = evaluation_function(player_id);
+			else
+				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
+			if (player_id==-1 && temp_val>=best_val)
+				best_val = temp_val;
+			else if (player_id==1 && temp_val<=best_val)
+				best_val = temp_val;	
+
+			// restore hash value
+			if (temp == -1*player_id)
+				hashvalue ^= table[bombed][-1*player_id + 2];
+			else if (temp != 0)
+				hashvalue ^= table[bombed][-1*player_id + 1];	
+			// restoration
+			board[j_][i_] = temp;
+			if (temp == -1*player_id)		// opponent's townhall
+				townhalls[-1*player_id + 1]+=1;
+			else if (temp!=0)
+			{
+				*(opponent_soldiers + opp_soldier) = bombed;
+				scount[-1*player_id + 1]+=1;
+			}
+
+			// alpha beta pruning
+			if (player_id == -1)
+				alpha = max(alpha, temp_val);
+			else
+				beta = min(beta, temp_val);
+			if (alpha > beta)
+			{
+				mapping[depth].insert(pair<UINT64,float>(hashvalue,temp_val));
+				return temp_val;
+			}
+
+		}
+	}
+
 
 	clock_t t;
 	for (int i=0; i<soldiers_number; i++)
@@ -743,23 +1067,13 @@ float minimax(int player_id, int depth , float alpha, float beta)
 				return temp_val;
 		}
 	}
-	vector<pair<int,int>> move_pos;
-	vector<pair<int,int>> fire_at;			// hit 1st int cell from second soldier
 	
-	cannon_related(player_id, move_pos, fire_at);
 	for (int i=0; i<move_pos.size(); i++)
 	{
 		int soldier_moved = move_pos[i].first;
 		int new_pos = move_pos[i].second;
 		int old_position = *(my_soldiers + soldier_moved);
-		if (board[old_position/N][old_position%N] != (player_id*(soldier_moved+2)))
-		{
-			cerr<<"SOME ERROR at depth "<<depth<<" for player id "<< player_id<<endl;
-			cerr<<"soldier to be moved: "<<soldier_moved<<" to cell "<<new_pos%N<<" "<<new_pos/N<<endl;
-			cerr<<"currently at cell "<<old_position%N<<" "<<old_position/N<<endl;
-			cerr<<"number on this cell "<<board[old_position/N][old_position%N];
-		}
-
+		
 		// updating board
 		board[new_pos/N][new_pos%N] = player_id * (soldier_moved + 2);
 		board[old_position/N][old_position%N] = 0;
