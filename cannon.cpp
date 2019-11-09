@@ -543,20 +543,21 @@ float evaluation_function(int player_id)
 	cannon_related_2(-1, number_of_cannons0, number_of_cannons_horiz0, townhalls_under_fire2, soldiers_under_fire2);
 	int attacked_townhalls_black, attacked_townhalls_white;
 	townhalls_attacked_by_soldiers(attacked_townhalls_black, attacked_townhalls_white);
-	// secure_townhalls(not_secure_white, not_secure_black);
+	secure_townhalls(not_secure_white, not_secure_black);
 
-	float black_score = 150*townhalls[0] +  15*scount[0] - 40*townhalls_under_fire0 - 40*attacked_townhalls_black - 3*not_secure_black;
-	float white_score = 150*townhalls[2] +  15*scount[2] - 40*townhalls_under_fire2 - 40*attacked_townhalls_white - 3*not_secure_white;
+	float black_score = 150*townhalls[0] +  15*scount[0] - 50*townhalls_under_fire0 - 40*attacked_townhalls_black - 5*not_secure_black;
+	float white_score = 150*townhalls[2] +  15*scount[2] - 50*townhalls_under_fire2 - 40*attacked_townhalls_white - 5*not_secure_white;
 
-	// if (player_id == -1)
-	// 	score = 0.6*black_score - 0.4*white_score;
-	// else
-	// 	score = 0.4*black_score - 0.6*white_score;
+	if (player_id == -1)
+		// score = 0.6*black_score - 0.4*white_score;
+		score = black_score - white_score;
+	else
+		score = 0.4*black_score - 0.6*white_score;
 	
 	// score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
 
-	score = black_score - white_score;
-	score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+0.5*(soldiers_under_fire2 - soldiers_under_fire0);
+	// score = black_score - white_score;
+	score += 6*(number_of_cannons0-number_of_cannons2) + 2*(number_of_cannons_horiz0-number_of_cannons_horiz2)+1*(soldiers_under_fire2 - soldiers_under_fire0);
 
 	if (min(scount[0],scount[2]) <=4)
 		score += 15*(scount[0] - scount[2]);
@@ -896,8 +897,10 @@ float minimax(int player_id, int depth , float alpha, float beta)
 string root_minimax(int player_id, int depth)
 {
 	
+	// clear mapping
+	for (int i=0; i<8; i++)
+		mapping[i].clear();
 	hashvalue = find_hash();
-	cerr<<"hash value start "<<hashvalue<<endl;
 
 	for (int i=0; i<8; i++)
 		counti[i] = 0;
@@ -978,28 +981,24 @@ string root_minimax(int player_id, int depth)
 			{
 				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
 				{
-					cerr<<"5 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
 					counter = 1;
 					depth--;
 				}
 				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
 				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
+					cerr<<"12 sec passed, depth changed to "<<depth-1<<endl;
 					counter++;
 					depth--;
 				}
 				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
 				{
-					cerr<<"15 sec passed"<<endl;
+					cerr<<"20 sec passed"<<endl;
 					depth = 3;
 				}
 				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
 			}
 
-			// -------------------------------
-			// received value corresponding to this state - save in map
-			// mapping[depth].insert(pair<UINT64, float>(hashvalue,temp_val));
-			
 			if (player_id==-1 && (temp_val>best_val || isEqual(best_val,best_val_static) || (temp == -1*player_id)))
 				{
 					best_val = temp_val;
@@ -1016,6 +1015,8 @@ string root_minimax(int player_id, int depth)
 					position_to_fire_or_move = pos[k];
 					fire_or_move = 'M';
 				}
+
+			cerr<<"S "<<old_position%N<<" "<<old_position/N<<" M "<<i_<<" "<<j_<<" : "<<temp_val<<endl;
 
 			// restoring board
 			board[old_position/N][old_position%N] = player_id * (i+2);
@@ -1115,6 +1116,8 @@ string root_minimax(int player_id, int depth)
 			position_to_fire_or_move = new_pos;
 			fire_or_move = 'M';
 		}
+
+		cerr<<"S "<<old_position%N<<" "<<old_position/N<<" "<<new_pos%N<<" "<<new_pos/N<<" : "<<temp_val<<endl;
 
 		// restoring board
 		board[new_pos/N][new_pos%N] = 0;
@@ -1217,6 +1220,8 @@ string root_minimax(int player_id, int depth)
 			fire_or_move = 'B';
 		}
 
+		cerr<<"S B "<<i_<<" "<<j_<<" : "<<temp_val<<endl;
+
 		// restoration
 		board[j_][i_] = temp;
 		if (temp == -1*player_id)
@@ -1252,20 +1257,18 @@ string root_minimax(int player_id, int depth)
 	if (position_to_fire_or_move < 0)
 		cerr<<"whyR??"<<endl;
 
-	cerr<<"hashvalue end: "<<hashvalue<<endl;
-	for (int i=0; i<8; i++)
-		cerr<<counti[i]<<" ; ";
+	// cerr<<"hashvalue end: "<<hashvalue<<endl;
+	// for (int i=0; i<8; i++)
+	// 	cerr<<counti[i]<<" ; ";
 	// IMPLEMENT THE BEST MOVE
 
 	// RETURN THE BEST MOVE
 	string best_move = "S " + to_string(*(my_soldiers+soldier_to_move)%N) + " " + to_string(*(my_soldiers+soldier_to_move)/N) + " " + (fire_or_move) + " " + to_string(position_to_fire_or_move%N) + " " + to_string(position_to_fire_or_move/N);
 
-	cerr<<best_move<<endl;
+	// cerr<<best_move<<endl;
 	play_move2(best_move, -1*player_id);
 	return best_move;
 }
-
-
 
 int main(int argc, char const *argv[])
 {
@@ -1274,6 +1277,7 @@ int main(int argc, char const *argv[])
 	// DOUBT - take in N then M ya ulta?
 	cin>>player_id_recv>>M>>N>>timelimit;
 	soldiers_number = 3 * (N/2);
+	cerr<<"TABLE WALA hi hai\n";
 	// cerr<<"Number of soldiers: "<<soldiers_number<<endl;
 	// cerr<<"Computer is player: "<<player_id_recv<<endl;
 	if (player_id_recv == 1)
@@ -1305,7 +1309,7 @@ int main(int argc, char const *argv[])
 
 	string s;
 	int i=0;
-	int minimax_depth = 6,fast_count=0,fast_cutoff=3;
+	int minimax_depth = 4,fast_count=0,fast_cutoff=3;
 	float low_cutoff=1,high_cutoff=8;
 	// clock_t t;
 	// float time_taken,total_time=0;
@@ -1345,8 +1349,9 @@ int main(int argc, char const *argv[])
 		}
 		else
 		{
-			low_cutoff=0;
-			high_cutoff =2;
+			// low_cutoff=0;
+			// high_cutoff =2;
+			minimax_depth = 3;
 		}
 
 		if(time_taken<low_cutoff)
