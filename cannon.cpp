@@ -33,7 +33,7 @@ int N, M;		// M is the number of rows and N is the number of columns
 int soldiers_number;
 
 int opponent_empty = 0, our_empty = 0;
-int empty_count[3];
+// int empty_count[3];
 
 // int player_number = 0; 		// -1 for black, 1 for white
 
@@ -534,6 +534,102 @@ void townhalls_attacked_by_soldiers(int &black_townhalls, int &white_townhalls)	
 	// return (white_townhalls - black_townhalls);
 }
 
+int attacking_soldiers(int player_id)
+{
+	int a=0;
+
+	if(player_id==-1)
+	{
+		for(int i =0;i<N;i++)
+		{
+			if(board[M-3][i]>0)
+				{
+					bool defend =false;
+					for(int j=M-3;j<=M-1;j++)
+					{
+						if(board[j][max(i-1,0)]<-1 ||	board[j][i]<-1 || board[j][min(i+1,N-1)]<-1 )
+							defend =true;
+					}
+					if(!defend)
+						a++;
+				}
+		}			
+	}
+
+	else if(player_id == 1)
+	{
+		for(int i =0;i<N;i++)
+		{
+			if(board[2][i]<0)
+				{
+					bool defend =false;
+					for(int j=0;j<=2;j++)
+					{
+						if(board[j][max(i-1,0)]>1 ||	board[j][i]>1 || board[j][min(i+1,N-1)]>1 )
+							defend =true;
+					}
+					if(!defend)
+						a++;
+				}
+		}			
+	}
+
+	return a;
+}
+int attacking_soldiers2(int player_id)
+{
+	int a = 0;
+	if (player_id == -1)
+	{
+		for (int i=0; i<soldiers_number; i++)
+		{
+			if (*(soldiers1+i) == -1)
+				continue;
+			int x = *(soldiers1+i)%N;
+			int y = *(soldiers1+i)/N;
+			bool defended = false;
+			bool townhall = false;
+			if (y <= 2)
+			{
+				for (int j=0; j<=y; j++)
+				{
+					if(board[j][max(i-1,0)]>1 || board[j][i]>1 || board[j][min(i+1,N-1)]>1)
+						defended = true;
+					if(board[j][max(i-1,0)]==1 || board[j][i]==1 || board[j][min(i+1,N-1)]==1)
+						townhall = true;
+				}
+				if (defended==false && townhall == true)
+					a++;
+			}
+		}
+	}
+
+	else if (player_id == 1)
+	{
+		for (int i=0; i<soldiers_number; i++)
+		{
+			if (*(soldiers2+i) == -1)
+				continue;
+			int x = *(soldiers2+i)%N;
+			int y = *(soldiers2+i)/N;
+			bool defended = false;
+			bool townhall = false;
+			if (y >= M-3)
+			{
+				for (int j=M-1; j>=y; j--)
+				{
+					if(board[j][max(i-1,0)]<-1 || board[j][i]<-1 || board[j][min(i+1,N-1)]<-1)
+						defended = true;
+					if(board[j][max(i-1,0)]==-1 || board[j][i]==-1 || board[j][min(i+1,N-1)]==-1)
+						townhall = true;
+				}
+				if (defended==false && townhall == true)
+					a++;
+			}
+		}
+	}
+	return a;
+}
 void secure_townhalls(int &not_secure_white, int &not_secure_black)
 {
 	// a soldier near townhall is good
@@ -580,12 +676,19 @@ float evaluation_function(int player_id, int num1=1, int num2=1)
 	townhalls_attacked_by_soldiers(attacked_townhalls_black, attacked_townhalls_white);
 	secure_townhalls(not_secure_white, not_secure_black);
 
-	float black_score = 150*townhalls[0] +  15*scount[0] - 50*townhalls_under_fire0 - 40*attacked_townhalls_black - 5*not_secure_black;
-	float white_score = 150*townhalls[2] +  15*scount[2] - 50*townhalls_under_fire2 - 40*attacked_townhalls_white - 5*not_secure_white;
+	int attacking_soldiers_black = 0, attacking_soldiers_white=0;
+	if (min(scount[0],scount[1]) <=8)
+	{
+		attacking_soldiers_white = attacking_soldiers(-1);
+		attacking_soldiers_black = attacking_soldiers(1);
+	}
+
+	float black_score = 150*townhalls[0] +  30*scount[0] - 50*townhalls_under_fire0 - 40*attacked_townhalls_black - 5*not_secure_black + 5*attacking_soldiers_black;
+	float white_score = 150*townhalls[2] +  30*scount[2] - 50*townhalls_under_fire2 - 40*attacked_townhalls_white - 5*not_secure_white + 5*attacked_townhalls_white;
 
 	if (player_id == -1)
-		// score = 0.6*black_score - 0.4*white_score;
-		score = black_score - white_score;
+		score = 0.6*black_score - 0.4*white_score;
+		// score = black_score - white_score;
 	else
 		score = 0.4*black_score - 0.6*white_score;
 	
@@ -605,22 +708,35 @@ float evaluation_function(int player_id, int num1=1, int num2=1)
 		score = (1000+score);
 
 	if (scount[2] == 0)
+	{
+		cerr<<"??????----------???????_---------checked1\n";
 		score += 300*(townhalls[0]-townhalls[2] + 2);
+	}
 
 	if (scount[0] == 0)
+	{
+		cerr<<"??????----------???????_---------checked2\n";
 		score += (-300)*(townhalls[2]-townhalls[0] + 2);
+	}
 
 	// int num1, num2;
 	if (num2 == 0)		// no possible moves for player 2
+	{
+		cerr<<"??????----------???????_---------checked3\n";
 		score += 400*(townhalls[0]-townhalls[2] + 0.5);
+	}
 	if (num1 == 0)
+	{
+		cerr<<"??????----------???????_---------checked4\n";
 		score += (-400)*(townhalls[2]-townhalls[0] + 0.5);
+	}
 
 	// if (empty_count[-1*player_id+1]>=2 && empty_count[player_id+1]>=3)
 	// 	score += 200*(townhalls[0] - townhalls[2]);
 
 	return score;
 }
+
 int play_move(int x1, int y1, char ch2, int x2, int y2, int player_id)		// player_id has received this move from opponent
 {
 	int *opponent_soldiers = (player_id==-1)? soldiers2:soldiers1;
@@ -986,8 +1102,9 @@ float minimax(int player_id, int depth , float alpha, float beta)
 	return best_val;
 }
 
-string root_minimax(int player_id, int depth)
+string root_minimax(int player_id, int depth, int &repeat, int &emptym)
 {	
+	emptym = 0;
 	// clear mapping
 	for (int i=0; i<8; i++)
 		mapping[i].clear();
@@ -1019,13 +1136,18 @@ string root_minimax(int player_id, int depth)
 
 	for (int i=0; i<soldiers_number; i++)
 	{
-
 		if (*(my_soldiers + i) == -1)
 			continue;
 		possible_moves2(i, player_id, pos);
 		
 		for (int k=0; k<pos.size(); k++)
 		{
+			if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10)
+			{
+				cerr<<"10 sec passed, restart...\n";
+				repeat = 1;
+				return "";
+			}
 			int i_ = pos[k]%N;
 			int j_ = pos[k]/N;
 			int old_position = *(my_soldiers + i);
@@ -1082,43 +1204,23 @@ string root_minimax(int player_id, int depth)
 			else if (depth == 0)
 				temp_val = evaluation_function(player_id);
 			else
-			{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
-				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
-					counter = 1;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
-				{
-					cerr<<"12 sec passed, depth changed to "<<depth-1<<endl;
-					counter++;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
-				{
-					cerr<<"20 sec passed"<<endl;
-					depth = 3;
-				}
 				temp_val = minimax(-1*player_id, depth-1, alpha, beta);
-			}
-
 			if (player_id==-1 && (temp_val>best_val || isEqual(best_val,best_val_static) || (temp == -1*player_id)))
-				{
-					best_val = temp_val;
-					soldier_to_move = i;
-					if (*(my_soldiers + soldier_to_move) < 0) cerr<<"how is this possible"<<endl;
-					position_to_fire_or_move = pos[k];
-					fire_or_move = 'M';
-				}
+			{
+				best_val = temp_val;
+				soldier_to_move = i;
+				if (*(my_soldiers + soldier_to_move) < 0) cerr<<"how is this possible"<<endl;
+				position_to_fire_or_move = pos[k];
+				fire_or_move = 'M';
+			}
 			else if (player_id==1 && (temp_val<best_val || isEqual(best_val, best_val_static) || (temp == -1*player_id)))
-				{
-					best_val = temp_val;
-					soldier_to_move = i;
-					if (*(my_soldiers + soldier_to_move) < 0) cerr<<"how is this possible"<<endl;
-					position_to_fire_or_move = pos[k];
-					fire_or_move = 'M';
-				}
+			{
+				best_val = temp_val;
+				soldier_to_move = i;
+				if (*(my_soldiers + soldier_to_move) < 0) cerr<<"how is this possible"<<endl;
+				position_to_fire_or_move = pos[k];
+				fire_or_move = 'M';
+			}
 
 			cerr<<"S "<<old_position%N<<" "<<old_position/N<<" M "<<i_<<" "<<j_<<" : "<<temp_val<<endl;
 
@@ -1160,6 +1262,13 @@ string root_minimax(int player_id, int depth)
 	cannon_related(player_id, move_pos, fire_at);
 	for (int i=0; i<move_pos.size(); i++)
 	{
+		if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10)
+		{
+			cerr<<"10 sec passed, restart...\n";
+			repeat = 1;
+			return "";
+		}
+
 		int soldier_moved = move_pos[i].first;
 		int new_pos = move_pos[i].second;
 		int old_position = *(my_soldiers + soldier_moved);
@@ -1197,26 +1306,7 @@ string root_minimax(int player_id, int depth)
 		else if (depth == 0)
 			temp_val = evaluation_function(player_id);
 		else
-		{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
-				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
-					counter = 1;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
-				{
-					cerr<<"15 sec passed, depth changed to "<<depth-1<<endl;
-					counter++;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
-				{
-					cerr<<"20 sec passed"<<endl;
-					depth = 3;
-				}
 			temp_val = minimax(-1*player_id, depth-1, alpha, beta);
-		}
 
 		if (player_id==-1 && (temp_val>best_val || isEqual(best_val, best_val_static)))
 		{
@@ -1257,6 +1347,12 @@ string root_minimax(int player_id, int depth)
 	int added = 0;
 	for (int i=0; i<fire_at.size(); i++)
 	{
+		if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10)
+		{
+			cerr<<"10 sec passed, restart..\n";
+			repeat = 1;
+			return "";
+		}
 		int opp_soldier;
 		int bombed = fire_at[i].first;
 		// board and soldiers update
@@ -1312,27 +1408,7 @@ string root_minimax(int player_id, int depth)
 		else if (depth == 0)
 			temp_val = evaluation_function(player_id);
 		else
-		{
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 10 && counter==0)
-				{
-					cerr<<"10 sec passed, depth changed to "<<depth-1<<endl;
-					counter = 1;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 15 && counter<=1)
-				{
-					cerr<<"15 sec passed, depth changed to "<<depth-1<<endl;
-					counter++;
-					// cerr<<counter<<endl;
-					depth--;
-				}
-				if ((clock()-t_)/(float)CLOCKS_PER_SEC > 20)
-				{
-					cerr<<"20 sec passed"<<endl;
-					depth = 3;
-				}
 			temp_val = minimax(-1*player_id, depth-1, alpha, beta);
-		}
 		if (player_id==-1 && (temp_val>best_val || (temp_val==best_val && temp!=0)))
 		{
 			best_val = temp_val;
@@ -1394,18 +1470,18 @@ string root_minimax(int player_id, int depth)
 	string best_move = "S " + to_string(*(my_soldiers+soldier_to_move)%N) + " " + to_string(*(my_soldiers+soldier_to_move)/N) + " " + (fire_or_move) + " " + to_string(position_to_fire_or_move%N) + " " + to_string(position_to_fire_or_move/N);
 
 	// cerr<<best_move<<endl;
-	int empty_move = play_move2(best_move, -1*player_id);
-	if (empty_move == 1)
-		empty_count[player_id+1]++;
-	else
-		empty_count[player_id+1]=0;
+	emptym = play_move2(best_move, -1*player_id);
+	// if (empty_move == 1)
+	// 	empty_count[player_id+1]++;
+	// else
+	// 	empty_count[player_id+1]=0;
 	return best_move;
 }
 
 int main(int argc, char const *argv[])
 {
-	int player_id_recv=0, timelimit=10, player_id;
-	empty_count[0]=0;empty_count[1]=0;empty_count[2]=0;
+	int player_id_recv=0, timelimit=90, player_id;
+	// empty_count[0]=0;empty_count[1]=0;empty_count[2]=0;
 
 	// DOUBT - take in N then M ya ulta?
 	cin>>player_id_recv>>M>>N>>timelimit;
@@ -1425,6 +1501,7 @@ int main(int argc, char const *argv[])
 
 	initialise();
 	// print_board();
+	int empty_opp=0, empty_us=0;
 
 	string move;
 	getline(cin, move);
@@ -1437,11 +1514,12 @@ int main(int argc, char const *argv[])
 			getline(cin, move);
 		t2 = clock();
 		opponent_time += ((float)(t2-t1))/CLOCKS_PER_SEC;
-		int t = play_move2(move, player_id);
-		if (t==1)
-			empty_count[-1*player_id + 1]++;
-		else
-			empty_count[-1*player_id + 1]=0;
+		empty_opp = play_move2(move, player_id);
+
+		// if (t==1)
+		// 	empty_count[-1*player_id + 1]++;
+		// else
+		// 	empty_count[-1*player_id + 1]=0;
 		print_board();
 	}
 
@@ -1449,6 +1527,8 @@ int main(int argc, char const *argv[])
 	int i=0;
 	int minimax_depth = 4,fast_count=0,fast_cutoff=3;
 	float low_cutoff=1,high_cutoff=8;
+	int rep;
+	
 	// clock_t t;
 	// float time_taken,total_time=0;
 	while(true)
@@ -1459,40 +1539,60 @@ int main(int argc, char const *argv[])
 		i++;
 		t = clock();
 		// int a = (player_id==-1)?scount[0]:scount[2];
+		rep = 0;
+		if (empty_us==1 && empty_opp==1)
+			cout<<s<<endl;
+		else
+		{
+			cerr<<"SAHI HAI KYA\n";
+			cerr<<empty_us<<" "<<empty_opp<<" "<<s<<endl;
+			s = root_minimax(player_id,minimax_depth, rep, empty_us);
+			while (rep == 1)
+			{
+				minimax_depth--;
+				cerr<<"depth decreased to "<<minimax_depth<<endl;
+				rep = 0;
+				s = root_minimax(player_id, minimax_depth, rep, empty_us);
+			}
+			cout<<s<<endl;
+		}
 		
-		s = root_minimax(player_id,minimax_depth);
-		cout<<s<<endl;
 		time_taken = (clock()-t)/(float)CLOCKS_PER_SEC;
 		cerr<<"time taken: "<<time_taken<<endl;
+
 		total_time+=time_taken;
+		time_left = timelimit - total_time;
+
+		cerr<<"time left: "<<time_left<<endl;
 
 		if (fast_count==1 && minimax_depth==3)
 		{
 			minimax_depth++;
 			fast_count=0;
 		}
-		if( total_time < 20 )
+		if( (timelimit>110 && time_left>90) ||  time_left > 70 )
 		{
 			low_cutoff=2;
 			high_cutoff=8;
 		}
-		else if( total_time < 60 )
+		else if( (timelimit>110 && time_left>45) || time_left > 30 )
 		{
 			low_cutoff=3;
 			high_cutoff=6;
 		}
-		else if( total_time < 80)
+		else if( (timelimit>110 && time_left>20) ||  time_left > 10)
 		{
 			low_cutoff = 1.5;
 			high_cutoff = 6;
 			fast_cutoff =5;
 		}
-		else
+		else if ((timelimit>110 && time_left>10) || time_left > 5)
 		{
-			// low_cutoff=0;
-			// high_cutoff =2;
-			minimax_depth = 3;
+			low_cutoff=0;
+			high_cutoff =0.5;
 		}
+		else
+			minimax_depth = 3;
 
 		if(time_taken<low_cutoff)
 			fast_count++;
@@ -1534,8 +1634,91 @@ int main(int argc, char const *argv[])
 		{
 			cerr<<"Player 2 wins!";
 			break;
-		}
-		
+		}	
 	}
 	return 0;
 }
+// int main(int argc, char const *argv[])
+// {
+// 	int player_id_recv=0, timelimit=10, player_id;
+
+// 	// DOUBT - take in N then M ya ulta?
+// 	cin>>player_id_recv>>M>>N>>timelimit;
+// 	soldiers_number = 3 * (N/2);
+// 	// cerr<<"Number of soldiers: "<<soldiers_number<<endl;
+// 	// cerr<<"Computer is player: "<<player_id_recv<<endl;
+// 	if (player_id_recv == 1)
+// 		player_id = -1;
+// 	if (player_id_recv == 2)
+// 		player_id = 1;
+// 	// initTable();
+// 	// cerr<<"I am player_id "<<player_id<<endl;
+// 	clock_t t, t1, t2;
+// 	float time_taken,total_time=0,opponent_time, time_left;
+
+// 	initialise();
+// 	// print_board();
+
+// 	string move;
+// 	getline(cin, move);
+// 	if (player_id == 1)
+// 	{
+// 		cerr<<"waiting for move from opponent"<<endl;
+// 		t1 = clock();
+// 		getline(cin, move);
+// 		while (move == "")
+// 			getline(cin, move);
+// 		t2 = clock();
+// 		opponent_time += ((float)(t2-t1))/CLOCKS_PER_SEC;
+// 		play_move2(move, player_id);
+// 		print_board();
+// 	}
+
+// 	string s;
+// 	int i=0;
+// 	int minimax_depth = 4, fast_count=0,fast_cutoff=3;
+// 	float low_cutoff=1,high_cutoff=8;
+// 	int xx;
+// 	// clock_t t;
+// 	// float time_taken,total_time=0;
+// 	while(i<20)
+// 	{
+// 		i++;
+// 		cerr<<"ROUND "<<i<<endl;
+		
+// 		cout<<"player 1\n";
+// 		t = clock();
+// 		s = root_minimax(player_id,minimax_depth,xx);
+// 		cout<<s<<endl;
+// 		time_taken = (clock()-t)/(float)CLOCKS_PER_SEC;
+// 		cerr<<"time taken: "<<time_taken<<endl;
+// 		total_time+=time_taken;
+
+// 		cout<<"player 2\n";
+// 		t = clock();
+// 		s = root_minimax(-1*player_id,minimax_depth,xx);
+// 		cout<<s<<endl;
+// 		time_taken = (clock()-t)/(float)CLOCKS_PER_SEC;
+// 		cerr<<"time taken: "<<time_taken<<endl;
+
+// 		// cerr<<"waiting for move from opponent"<<endl;
+// 		// getline(cin, move);
+// 		// while (move == "")
+// 		// 	getline(cin, move);
+// 		// // cerr<<"move received: "<<move<<endl;
+// 		// play_move2(move, player_id);
+
+// 		if (townhalls[2] <= 2)
+// 		{
+// 			cerr<<"Player 1 wins!";
+// 			break;
+// 		}
+// 		else if (townhalls[0] <= 2)
+// 		{
+// 			cerr<<"Player 2 wins!";
+// 			break;
+// 		}
+		
+// 	}
+// 	return 0;
+// }
