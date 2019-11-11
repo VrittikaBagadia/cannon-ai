@@ -1726,7 +1726,7 @@ int main(int argc, char const *argv[])
 		while (move == "")
 			getline(cin, move);
 		// cerr<<"move received: "<<move<<endl;
-		play_move2(move, player_id);
+		empty_opp = play_move2(move, player_id);
 		// print_board();
 		// evaluation_function(1);
 
