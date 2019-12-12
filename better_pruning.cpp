@@ -630,7 +630,7 @@ float evaluation_function(int player_id, int num1=1, int num2=1)
 	}
 
 	float black_score = 150*townhalls[0] +  30*scount[0] - 50*townhalls_under_fire0 - 40*attacked_townhalls_black - 5*not_secure_black + 5*attacking_soldiers_black;
-	float white_score = 150*townhalls[2] +  30*scount[2] - 50*townhalls_under_fire2 - 40*attacked_townhalls_white - 5*not_secure_white + 5*attacked_townhalls_white;;
+	float white_score = 150*townhalls[2] +  30*scount[2] - 50*townhalls_under_fire2 - 40*attacked_townhalls_white - 5*not_secure_white + 5*attacking_soldiers_white;;
 
 	if (player_id == -1)
 		score = 0.6*black_score - 0.4*white_score;
